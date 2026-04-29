@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SpritzoMetro — Prezzi dello Spritz in Italia</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --dark:    #1C1812;
+      --bg:      #FAFAF7;
+      --orange:  #F05A28;
+      --text:    #1C1812;
+      --muted:   #8a8680;
+      --border:  #e8e4de;
+      --serif:   'Cormorant Garamond', serif;
+      --sans:    'DM Sans', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: var(--sans); background: var(--bg); color: var(--text); overflow: hidden; }
+
+    /* ── HEADER ── */
+    header {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+      background: var(--dark);
+      height: 52px;
+      display: flex; align-items: center;
+      padding: 0 20px; gap: 12px;
+    }
+
+    .logo {
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 600;
+      color: #FAFAF7;
+      letter-spacing: -0.3px;
+    }
+
+    .logo em {
+      font-style: italic;
+      color: var(--orange);
+    }
+
+    .live-wrap {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; color: #9a9690; font-weight: 400;
+    }
+
+    .live-dot {
+      width: 5px; height: 5px;
+      background: #22c55e; border-radius: 50%;
+      animation: lpulse 2s ease-in-out infinite;
+      box-shadow: 0 0 4px #22c55e;
+    }
+
+    @keyframes lpulse { 0%,100%{opacity:1}50%{opacity:.3} }
+
+    .header-right { margin-left: auto; display: flex; align-items: center; gap: 10px; }
+
+    .contribute-btn {
+      background: var(--orange); color: white; border: none;
+      border-radius: 5px; padding: 7px 14px;
+      font-size: 12px; font-weight: 600; font-family: var(--sans);
+      cursor: pointer; transition: opacity .15s; white-space: nowrap;
+    }
+    .contribute-btn:hover { opacity: .85; }
+
+    /* ── TICKER ── */
+    .ticker {
+      position: fixed; top: 52px; left: 0; right: 0; z-index: 190;
+      background: var(--orange);
+      height: 28px;
+      overflow: hidden;
+      display: flex; align-items: center;
+    }
+
+    .ticker-track {
+      display: flex; gap: 0;
+      animation: ticker-scroll 30s linear infinite;
+      white-space: nowrap;
+    }
+
+    .ticker-track span {
+      font-size: 11px; font-weight: 600; color: white;
+      padding: 0 24px;
+      letter-spacing: 0.3px;
+    }
+
+    .ticker-track span::after {
+      content: '·';
+      margin-left: 24px;
+      opacity: 0.6;
+    }
+
+    @keyframes ticker-scroll {
+      0% { transform: translateX(0); }
+      100% { transform: translateX(-50%); }
+    }
+
+    /* ── HERO STATS ── */
+    .hero-stats {
+      position: fixed; top: 80px; left: 0; right: 0; z-index: 180;
+      background: var(--dark);
+      display: flex;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .hstat {
+      flex: 1;
+      padding: 14px 20px;
+      border-right: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .hstat:last-child { border-right: none; }
+
+    .hstat-val {
+      font-family: var(--serif);
+      font-size: 42px;
+      font-weight: 600;
+      color: #FAFAF7;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+
+    .hstat-val.orange { color: var(--orange); }
+
+    .hstat-lbl {
+      font-size: 10px;
+      font-weight: 500;
+      color: #6a6660;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+
+    /* ── LAYOUT ── */
+    .layout {
+      display: flex;
+      height: 100vh;
+      padding-top: 80px; /* header + ticker */
+    }
+
+    /* After hero stats loads, layout shifts */
+    .layout.stats-visible { padding-top: 152px; }
+
+    /* ── SIDEBAR ── */
+    .sidebar {
+      width: 380px;
+      min-width: 380px;
+      background: var(--bg);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* ── FILTERS ── */
+    .filters {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .search-wrap { position: relative; }
+
+    .search-input {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 8px 12px 8px 32px;
+      font-size: 13px; font-family: var(--sans);
+      background: white; color: var(--text);
+      outline: none; transition: border-color .15s;
+    }
+
+    .search-input:focus { border-color: var(--orange); }
+    .search-input::placeholder { color: var(--muted); }
+
+    .search-icon {
+      position: absolute; left: 9px; top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px; color: var(--muted);
+    }
+
+    .chip-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+
+    .chip {
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      font-size: 11px; font-weight: 500; font-family: var(--sans);
+      color: var(--muted); background: transparent;
+      cursor: pointer; transition: all .15s; white-space: nowrap;
+    }
+
+    .chip:hover { border-color: var(--orange); color: var(--orange); }
+    .chip.active { background: var(--dark); border-color: var(--dark); color: white; }
+
+    .sort-select {
+      margin-left: auto;
+      border: 1px solid var(--border); border-radius: 5px;
+      padding: 4px 8px; font-size: 11px; font-family: var(--sans);
+      color: var(--muted); background: transparent; outline: none; cursor: pointer;
+    }
+
+    /* ── BAR LIST ── */
+    .bar-list { flex: 1; overflow-y: auto; }
+    .bar-list::-webkit-scrollbar { width: 3px; }
+    .bar-list::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .bar-item {
+      display: flex; align-items: center;
+      padding: 13px 16px;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer; transition: background .1s; gap: 10px;
+    }
+
+    .bar-item:hover { background: white; }
+    .bar-item.active { background: white; border-left: 3px solid var(--orange); }
+
+    .bar-rank { font-size: 11px; font-weight: 500; color: var(--muted); min-width: 20px; }
+
+    .bar-info { flex: 1; min-width: 0; }
+
+    .bar-name {
+      font-size: 14px; font-weight: 600; color: var(--text);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+
+    .bar-sub {
+      font-size: 11px; color: var(--muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: flex; gap: 5px; align-items: center;
+    }
+
+    .tag {
+      font-size: 9px; font-weight: 600; padding: 1px 5px;
+      border-radius: 3px; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+
+    .tag.ai { background: #f0fdf4; color: #16a34a; }
+    .tag.user { background: #fff7ed; color: var(--orange); }
+    .tag.new { background: #fef3c7; color: #92400e; }
+
+    .bar-price {
+      font-family: var(--serif);
+      font-size: 26px; font-weight: 600;
+      color: var(--text);
+      min-width: 70px; text-align: right;
+      line-height: 1;
+    }
+
+    .bar-price.none { font-family: var(--sans); font-size: 14px; color: var(--muted); font-weight: 400; }
+
+    /* Promo card every 8 rows */
+    .promo-card {
+      margin: 4px 12px;
+      background: var(--dark);
+      border-radius: 6px;
+      padding: 12px 14px;
+      display: flex; align-items: center; justify-content: space-between;
+      cursor: pointer;
+    }
+
+    .promo-card p { font-size: 12px; color: #9a9690; }
+    .promo-card span { font-size: 11px; color: var(--orange); font-weight: 600; }
+
+    /* ── MAP ── */
+    #map { flex: 1; height: 100%; }
+
+    .leaflet-popup-content-wrapper {
+      border-radius: 8px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.15);
+      font-family: var(--sans);
+      padding: 0;
+    }
+
+    .leaflet-popup-content { margin: 0; min-width: 180px; }
+    .leaflet-popup-tip-container { display: none; }
+    .leaflet-popup-close-button { color: var(--muted) !important; top: 10px !important; right: 10px !important; }
+
+    .popup-inner { padding: 14px 16px; }
+    .popup-name { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 6px; line-height: 1.2; }
+    .popup-price { font-family: var(--serif); font-size: 32px; font-weight: 600; color: var(--text); line-height: 1; margin-bottom: 4px; }
+    .popup-price.none { font-family: var(--sans); font-size: 13px; font-weight: 400; color: var(--muted); }
+    .popup-addr { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+    .popup-maps {
+      display: inline-block; padding: 6px 12px;
+      background: var(--dark); color: white; border-radius: 4px;
+      font-size: 11px; font-weight: 600; text-decoration: none;
+      transition: opacity .15s;
+    }
+    .popup-maps:hover { opacity: .8; }
+
+    /* City shortcuts top-right of map */
+    .city-shortcuts {
+      position: absolute; top: 12px; right: 12px; z-index: 500;
+      display: flex; flex-direction: column; gap: 5px;
+    }
+
+    .city-short {
+      background: rgba(28,24,18,0.88);
+      backdrop-filter: blur(8px);
+      color: white; border: none; border-radius: 4px;
+      padding: 5px 10px; font-size: 11px; font-weight: 500;
+      font-family: var(--sans); cursor: pointer;
+      transition: background .15s; white-space: nowrap;
+      text-align: left;
+    }
+
+    .city-short:hover { background: var(--orange); }
+
+    /* Map legend bottom-left */
+    .map-legend {
+      position: absolute; bottom: 20px; left: 12px; z-index: 500;
+      background: rgba(28,24,18,0.85);
+      backdrop-filter: blur(10px);
+      border-radius: 6px; padding: 10px 14px;
+    }
+
+    .legend-title { font-size: 9px; font-weight: 600; color: #6a6660; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 7px; }
+    .legend-row { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #c8c4be; margin-bottom: 4px; font-weight: 400; }
+    .lcirc { width: 20px; height: 20px; border-radius: 50%; background: var(--dark); border: 1.5px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 8px; color: white; font-weight: 700; flex-shrink: 0; }
+
+    /* ── SLIDE-IN FORM ── */
+    .form-panel {
+      position: fixed; right: -440px; top: 0; bottom: 0; width: 420px;
+      background: var(--dark); z-index: 500;
+      transition: right .3s ease;
+      overflow-y: auto;
+      display: flex; flex-direction: column;
+    }
+
+    .form-panel.open { right: 0; }
+
+    .form-head {
+      padding: 20px 20px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+
+    .form-title { font-size: 20px; font-weight: 700; color: white; }
+    .form-sub { font-size: 12px; color: #6a6660; margin-top: 3px; }
+    .form-close { background: none; border: none; color: #6a6660; font-size: 20px; cursor: pointer; }
+    .form-close:hover { color: white; }
+
+    .form-body { padding: 20px; flex: 1; }
+
+    .field { margin-bottom: 14px; }
+
+    .field-label {
+      display: block; font-size: 10px; font-weight: 600;
+      color: #6a6660; text-transform: uppercase; letter-spacing: 0.8px;
+      margin-bottom: 5px;
+    }
+
+    .field-input, .field-select, .field-textarea {
+      width: 100%;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 5px;
+      padding: 9px 12px;
+      font-size: 13px; font-family: var(--sans);
+      color: white; outline: none;
+      transition: border-color .15s;
+    }
+
+    .field-input:focus, .field-select:focus, .field-textarea:focus { border-color: var(--orange); }
+    .field-input::placeholder, .field-textarea::placeholder { color: #5a5650; }
+    .field-select option { background: var(--dark); color: white; }
+    .field-textarea { resize: vertical; min-height: 70px; }
+    .field-row { display: flex; gap: 10px; }
+    .field-row .field { flex: 1; }
+
+    .form-submit {
+      width: 100%; padding: 12px;
+      background: var(--orange); color: white; border: none;
+      border-radius: 5px; font-size: 14px; font-weight: 700;
+      font-family: var(--sans); cursor: pointer; margin-top: 4px;
+      transition: opacity .15s;
+    }
+
+    .form-submit:hover { opacity: .85; }
+
+    .form-success {
+      display: none; text-align: center;
+      padding: 20px; color: #4ade80; font-size: 14px; font-weight: 600;
+    }
+
+    /* Form overlay backdrop */
+    .form-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 499; display: none;
+    }
+
+    .form-overlay.open { display: block; }
+
+    /* ── LOADER ── */
+    .top-loader {
+      position: fixed; top: 0; left: 0; right: 0; height: 2px;
+      background: var(--orange); z-index: 999; display: none;
+      animation: load 1.5s ease-in-out infinite; transform-origin: left;
+    }
+    .top-loader.active { display: block; }
+    @keyframes load { 0%{transform:scaleX(0)}70%{transform:scaleX(.8)}100%{transform:scaleX(1);opacity:0} }
+
+    /* ── MOBILE ── */
+    @media (max-width: 768px) {
+      .layout { flex-direction: column; padding-top: 80px; }
+      .layout.stats-visible { padding-top: 80px; }
+      .hero-stats { display: none; }
+      #map { height: 40vh; width: 100%; flex-shrink: 0; }
+      .sidebar { width: 100%; min-width: unset; height: 60vh; border-right: none; border-top: 1px solid var(--border); }
+      .city-shortcuts { display: none; }
+      .form-panel { width: 100%; right: -100%; }
+      .form-panel.open { right: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="top-loader" id="loader"></div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">Spritzo<em>Metro</em></div>
+  <div class="live-wrap">
+    <div class="live-dot"></div>
+    <span id="liveCount">— bar live</span>
+  </div>
+  <div class="header-right">
+    <button class="contribute-btn" onclick="openForm('contribute')">+ Segnala Prezzo</button>
+  </div>
+</header>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track" id="tickerTrack">
+    <span>Milano media €9.40</span>
+    <span>Roma media €7.80</span>
+    <span>Napoli media €5.20</span>
+    <span>Venezia media €8.50</span>
+    <span>Firenze media €6.90</span>
+    <span>Aggiornato ogni settimana</span>
+    <span>Milano media €9.40</span>
+    <span>Roma media €7.80</span>
+    <span>Napoli media €5.20</span>
+    <span>Venezia media €8.50</span>
+    <span>Firenze media €6.90</span>
+    <span>Aggiornato ogni settimana</span>
+  </div>
+</div>
+
+<!-- HERO STATS -->
+<div class="hero-stats" id="heroStats">
+  <div class="hstat">
+    <div class="hstat-val orange" id="avgPrice">—</div>
+    <div class="hstat-lbl">Media Nazionale</div>
+  </div>
+  <div class="hstat">
+    <div class="hstat-val" id="minPrice">—</div>
+    <div class="hstat-lbl">Più Economico</div>
+  </div>
+  <div class="hstat">
+    <div class="hstat-val" id="maxPrice">—</div>
+    <div class="hstat-lbl">Più Caro</div>
+  </div>
+  <div class="hstat">
+    <div class="hstat-val" id="totalBars">—</div>
+    <div class="hstat-lbl">Bar Monitorati</div>
+  </div>
+</div>
+
+<!-- LAYOUT -->
+<div class="layout stats-visible" id="mainLayout">
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="filters">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="searchInput" type="text" placeholder="Cerca bar o città..."/>
+      </div>
+      <div class="chip-row">
+        <button class="chip active" data-filter="all" onclick="setFilter('all')">Tutti</button>
+        <button class="chip" data-filter="under4" onclick="setFilter('under4')">Sotto €4</button>
+        <button class="chip" data-filter="mid" onclick="setFilter('mid')">€4–€7</button>
+        <button class="chip" data-filter="over7" onclick="setFilter('over7')">Sopra €7</button>
+        <button class="chip" data-filter="ai" onclick="setFilter('ai')">Verificati AI</button>
+        <select class="sort-select" id="sortSelect">
+          <option value="price_asc">Più economico</option>
+          <option value="price_desc">Più caro</option>
+          <option value="name_asc">A–Z</option>
+          <option value="recent">Recenti</option>
+        </select>
+      </div>
+      <div class="chip-row" id="cityFilters">
+        <button class="chip active" data-city="all" onclick="setCity('all')">Italia</button>
+      </div>
+    </div>
+    <div class="bar-list" id="barList">
+      <div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Caricamento...</div>
+    </div>
+  </div>
+
+  <!-- MAP -->
+  <div style="flex:1;position:relative;height:100%;overflow:hidden;">
+    <div id="map" style="height:100%;width:100%;"></div>
+
+    <!-- City shortcuts -->
+    <div class="city-shortcuts">
+      <button class="city-short" onclick="flyTo(41.9,12.5,6)">Italia</button>
+      <button class="city-short" onclick="flyTo(45.464,9.190,13)">Milano</button>
+      <button class="city-short" onclick="flyTo(41.902,12.496,13)">Roma</button>
+      <button class="city-short" onclick="flyTo(40.851,14.268,13)">Napoli</button>
+      <button class="city-short" onclick="flyTo(45.434,12.338,13)">Venezia</button>
+      <button class="city-short" onclick="flyTo(43.769,11.256,13)">Firenze</button>
+    </div>
+
+    <!-- Legend -->
+    <div class="map-legend">
+      <div class="legend-title">Marcatori</div>
+      <div class="legend-row">
+        <div class="lcirc">€</div>
+        Prezzo Aperol Spritz
+      </div>
+      <div class="legend-row">
+        <div class="lcirc" style="background:var(--orange)">?</div>
+        Prezzo non disponibile
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CONTRIBUTE FORM (slide-in) -->
+<div class="form-overlay" id="contributeOverlay" onclick="closeForm('contribute')"></div>
+<div class="form-panel" id="contributePanel">
+  <div class="form-head">
+    <div>
+      <div class="form-title">Segnala un Prezzo 🍊</div>
+      <div class="form-sub">Hai visto il prezzo di uno spritz? Condividilo con la community.</div>
+    </div>
+    <button class="form-close" onclick="closeForm('contribute')">✕</button>
+  </div>
+  <div class="form-body">
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label">Nome del Bar *</label>
+        <input class="field-input" id="c_name" placeholder="Es. Bar Centrale"/>
+      </div>
+      <div class="field">
+        <label class="field-label">Città *</label>
+        <select class="field-select" id="c_city">
+          <option value="">Seleziona...</option>
+          <option>Milano</option><option>Roma</option><option>Napoli</option>
+          <option>Venezia</option><option>Firenze</option><option>Torino</option>
+          <option>Bologna</option><option>Palermo</option><option>Verona</option><option>Altra</option>
+        </select>
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label">Prezzo Aperol Spritz (€) *</label>
+        <input class="field-input" id="c_price" type="number" placeholder="4.50" step="0.5" min="1" max="25"/>
+      </div>
+      <div class="field">
+        <label class="field-label">Indirizzo</label>
+        <input class="field-input" id="c_address" placeholder="Via Roma 12"/>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Note (opzionale)</label>
+      <textarea class="field-textarea" id="c_notes" placeholder="happy hour, snack inclusi, tipo spritz..."></textarea>
+    </div>
+    <button class="form-submit" onclick="submitContribute()">Invia Prezzo</button>
+    <div class="form-success" id="c_success">✅ Grazie! Il tuo contributo è stato ricevuto.</div>
+
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);">
+      <div style="font-size:12px;color:#6a6660;margin-bottom:12px;">Sei il proprietario del bar?</div>
+      <button onclick="closeForm('contribute');openForm('claim')"
+        style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:5px;color:#9a9690;font-size:12px;font-family:var(--sans);cursor:pointer;">
+        Richiedi ownership del tuo bar →
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- CLAIM FORM (slide-in) -->
+<div class="form-overlay" id="claimOverlay" onclick="closeForm('claim')"></div>
+<div class="form-panel" id="claimPanel">
+  <div class="form-head">
+    <div>
+      <div class="form-title">Sei il Proprietario? 🏪</div>
+      <div class="form-sub">Gestisci la tua presenza su SpritzoMetro gratuitamente.</div>
+    </div>
+    <button class="form-close" onclick="closeForm('claim')">✕</button>
+  </div>
+  <div class="form-body">
+    <div class="field">
+      <label class="field-label">Nome del Bar *</label>
+      <input class="field-input" id="cl_bar" placeholder="Nome esatto del bar"/>
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label class="field-label">Il tuo nome *</label>
+        <input class="field-input" id="cl_owner" placeholder="Nome e cognome"/>
+      </div>
+      <div class="field">
+        <label class="field-label">Email *</label>
+        <input class="field-input" id="cl_email" type="email" placeholder="email@esempio.it"/>
+      </div>
+    </div>
+    <div class="field">
+      <label class="field-label">Telefono</label>
+      <input class="field-input" id="cl_phone" placeholder="+39 ..."/>
+    </div>
+    <div class="field">
+      <label class="field-label">Messaggio</label>
+      <textarea class="field-textarea" id="cl_msg" placeholder="Aggiorna il prezzo o descrivi il tuo bar..."></textarea>
+    </div>
+    <button class="form-submit" onclick="submitClaim()">Invia Richiesta</button>
+    <div class="form-success" id="cl_success">✅ Richiesta inviata! Ti contatteremo presto.</div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL      = 'https://wkaeyssmfwkefxjhsgav.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrYWV5c3NtZndrZWZ4amhzZ2F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNjUxMzAsImV4cCI6MjA5MTY0MTEzMH0.lgq4S5Oexr5aNn2Zswo-8uqH--vFSiJmDNkAbHsFmlY';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let allBars=[], filteredBars=[], markers={}, map;
+let activeCity='all', activeFilter='all', activeBarId=null;
+
+// ── MAP ──
+function initMap() {
+  map = L.map('map', {center:[42,12.5], zoom:6, zoomControl:false, attributionControl:false});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:19}).addTo(map);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  setTimeout(()=>map.invalidateSize(), 200);
+  setTimeout(()=>map.invalidateSize(), 700);
+  setTimeout(()=>map.invalidateSize(), 1400);
+  window.addEventListener('resize', ()=>map.invalidateSize());
+}
+
+function flyTo(lat, lng, zoom) {
+  map.flyTo([lat, lng], zoom, {duration: 1.2});
+}
+
+function makeMarker(price) {
+  const hasPrice = price !== null && price !== undefined;
+  const bg = hasPrice ? '#1C1812' : '#F05A28';
+  const label = hasPrice ? `€${price.toFixed(1)}` : '?';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+    <circle cx="24" cy="24" r="22" fill="${bg}" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+    <text x="24" y="25" text-anchor="middle" dominant-baseline="middle" fill="white"
+      font-family="Cormorant Garamond,serif" font-weight="600" font-size="${hasPrice?'12':'14'}">${label}</text>
+  </svg>`;
+  return L.divIcon({html:svg, className:'', iconSize:[48,48], iconAnchor:[24,24], popupAnchor:[0,-26]});
+}
+
+// ── LOAD DATA ──
+async function loadData() {
+  document.getElementById('loader').classList.add('active');
+  try {
+    const {data:bars, error} = await db.from('bars').select('*, prices(price, called_at, source)').order('name');
+    if (error) throw error;
+    allBars = bars.map(bar => {
+      const prices = (bar.prices||[]).sort((a,b)=>new Date(b.called_at)-new Date(a.called_at));
+      const latest = prices[0];
+      const isNew = latest?.called_at && (Date.now()-new Date(latest.called_at).getTime()) < 7*24*3600*1000;
+      return {...bar, latestPrice:latest?.price||null, calledAt:latest?.called_at||null, source:latest?.source||null, isNew};
+    });
+    buildCityFilters();
+    updateStats();
+    updateTicker();
+    applyFilters();
+    setupRealtime();
+  } catch(err) {
+    document.getElementById('barList').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento.</div>`;
+  } finally {
+    document.getElementById('loader').classList.remove('active');
+  }
+}
+
+function buildCityFilters() {
+  const cities = [...new Set(allBars.map(b=>b.city).filter(Boolean))].sort();
+  const wrap = document.getElementById('cityFilters');
+  wrap.innerHTML = `<button class="chip active" data-city="all" onclick="setCity('all')">Italia</button>`;
+  cities.forEach(c => {
+    const btn = document.createElement('button');
+    btn.className='chip'; btn.dataset.city=c; btn.textContent=c;
+    btn.onclick=()=>setCity(c); wrap.appendChild(btn);
+  });
+  document.getElementById('liveCount').textContent = `${allBars.length} bar live`;
+}
+
+function updateStats() {
+  const wp = allBars.filter(b=>b.latestPrice);
+  document.getElementById('totalBars').textContent = allBars.length;
+  if (wp.length) {
+    const prices = wp.map(b=>b.latestPrice);
+    const avg = prices.reduce((s,p)=>s+p,0)/prices.length;
+    document.getElementById('avgPrice').textContent = `€${avg.toFixed(2)}`;
+    document.getElementById('minPrice').textContent = `€${Math.min(...prices).toFixed(2)}`;
+    document.getElementById('maxPrice').textContent = `€${Math.max(...prices).toFixed(2)}`;
+  }
+}
+
+function updateTicker() {
+  // Update ticker with real city averages
+  const cityAvgs = {};
+  allBars.filter(b=>b.latestPrice&&b.city).forEach(b=>{
+    if(!cityAvgs[b.city]) cityAvgs[b.city]=[];
+    cityAvgs[b.city].push(b.latestPrice);
+  });
+  const items = Object.entries(cityAvgs).map(([city,prices])=>{
+    const avg = prices.reduce((s,p)=>s+p,0)/prices.length;
+    return `${city} media €${avg.toFixed(2)}`;
+  });
+  items.push(`${allBars.length} bar monitorati`);
+  items.push('Aggiornato ogni settimana');
+  const doubled = [...items, ...items];
+  document.getElementById('tickerTrack').innerHTML = doubled.map(t=>`<span>${t}</span>`).join('');
+}
+
+function setCity(city) {
+  activeCity=city;
+  document.querySelectorAll('[data-city]').forEach(b=>b.classList.toggle('active',b.dataset.city===city));
+  applyFilters();
+}
+
+function setFilter(filter) {
+  activeFilter=filter;
+  document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase();
+  const sort = document.getElementById('sortSelect').value;
+
+  filteredBars = allBars.filter(b => {
+    const mc = activeCity==='all' || b.city===activeCity;
+    const ms = !search || b.name.toLowerCase().includes(search) || (b.city||'').toLowerCase().includes(search) || (b.address||'').toLowerCase().includes(search);
+    let mf = true;
+    if (activeFilter==='under4') mf = b.latestPrice && b.latestPrice < 4;
+    else if (activeFilter==='mid') mf = b.latestPrice && b.latestPrice >= 4 && b.latestPrice <= 7;
+    else if (activeFilter==='over7') mf = b.latestPrice && b.latestPrice > 7;
+    else if (activeFilter==='ai') mf = b.source === 'ai_call';
+    return mc && ms && mf;
+  });
+
+  filteredBars.sort((a,b) => {
+    if(sort==='price_asc') return (a.latestPrice||99)-(b.latestPrice||99);
+    if(sort==='price_desc') return (b.latestPrice||0)-(a.latestPrice||0);
+    if(sort==='name_asc') return a.name.localeCompare(b.name);
+    if(sort==='recent') return new Date(b.calledAt||0)-new Date(a.calledAt||0);
+    return 0;
+  });
+
+  renderList();
+  renderMarkers();
+}
+
+function renderList() {
+  const list = document.getElementById('barList');
+  if (!filteredBars.length) {
+    list.innerHTML=`<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Nessun bar trovato.</div>`;
+    return;
+  }
+
+  let html = '';
+  filteredBars.forEach((bar,i) => {
+    const price = bar.latestPrice ? `€${bar.latestPrice.toFixed(2)}` : '—';
+    const date = bar.calledAt ? new Date(bar.calledAt).toLocaleDateString('it-IT') : '';
+    const srcTag = bar.source==='ai_call' ? `<span class="tag ai">AI</span>` : bar.source==='user_submit' ? `<span class="tag user">Utente</span>` : '';
+    const newTag = bar.isNew ? `<span class="tag new">Nuovo</span>` : '';
+
+    html += `<div class="bar-item ${bar.id===activeBarId?'active':''}" onclick="selectBar('${bar.id}')" data-id="${bar.id}">
+      <div class="bar-rank">${i+1}</div>
+      <div class="bar-info">
+        <div class="bar-name">${bar.name}</div>
+        <div class="bar-sub">${bar.city||''}${date?' · '+date:''} ${srcTag}${newTag}</div>
+      </div>
+      <div class="bar-price ${!bar.latestPrice?'none':''}">${price}</div>
+    </div>`;
+
+    // Promo card every 8 rows
+    if ((i+1) % 8 === 0 && i < filteredBars.length-1) {
+      html += `<div class="promo-card" onclick="openForm('contribute')">
+        <p>Il tuo bar non è nell'indice?</p>
+        <span>Aggiungilo gratis →</span>
+      </div>`;
+    }
+  });
+
+  list.innerHTML = html;
+}
+
+function renderMarkers() {
+  Object.values(markers).forEach(m=>map.removeLayer(m));
+  markers={};
+  filteredBars.forEach(bar=>{
+    if(!bar.latitude||!bar.longitude) return;
+    const m = L.marker([bar.latitude,bar.longitude], {icon:makeMarker(bar.latestPrice)});
+    const addr = bar.address || '';
+    const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(bar.name+' '+addr)}`;
+    m.bindPopup(`<div class="popup-inner">
+      <div class="popup-name">${bar.name}</div>
+      ${bar.latestPrice
+        ? `<div class="popup-price">€${bar.latestPrice.toFixed(2)}</div>`
+        : `<div class="popup-price none">Prezzo non disponibile</div>`}
+      ${addr ? `<div class="popup-addr">${addr}</div>` : ''}
+      <a class="popup-maps" href="${mapsUrl}" target="_blank">Apri in Maps →</a>
+    </div>`, {maxWidth:240});
+    m.on('click', ()=>selectBar(bar.id, false));
+    m.addTo(map); markers[bar.id]=m;
+  });
+}
+
+function selectBar(id, flyTo=true) {
+  activeBarId=id;
+  const bar=allBars.find(b=>b.id===id); if(!bar) return;
+  document.querySelectorAll('.bar-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
+  const el=document.querySelector(`.bar-item[data-id="${id}"]`);
+  if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
+  if(flyTo&&bar.latitude&&bar.longitude) map.flyTo([bar.latitude,bar.longitude],15,{duration:1});
+  if(markers[id]) markers[id].openPopup();
+}
+
+function setupRealtime() {
+  db.channel('live')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prices'},payload=>{
+      const bar=allBars.find(b=>b.id===payload.new.bar_id);
+      if(bar){bar.latestPrice=payload.new.price;bar.calledAt=payload.new.called_at;bar.source=payload.new.source;updateStats();updateTicker();applyFilters();}
+    })
+    .subscribe();
+}
+
+// ── FORMS ──
+function openForm(type) {
+  document.getElementById(type+'Panel').classList.add('open');
+  document.getElementById(type+'Overlay').classList.add('open');
+}
+
+function closeForm(type) {
+  document.getElementById(type+'Panel').classList.remove('open');
+  document.getElementById(type+'Overlay').classList.remove('open');
+}
+
+async function submitContribute() {
+  const name=document.getElementById('c_name').value.trim();
+  const city=document.getElementById('c_city').value;
+  const price=parseFloat(document.getElementById('c_price').value);
+  const addr=document.getElementById('c_address').value.trim();
+  if(!name||!city||!price){alert('Compila i campi obbligatori (*)');return}
+  let barId;
+  const existing=allBars.find(b=>b.name.toLowerCase()===name.toLowerCase()&&b.city===city);
+  if(existing){barId=existing.id}
+  else{
+    const{data,error}=await db.from('bars').insert({name,city,address:addr,source:'user_submit'}).select().single();
+    if(error){alert('Errore. Riprova.');return}
+    barId=data.id; allBars.push({...data,latestPrice:null,prices:[]});
+  }
+  const{error}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
+  if(error){alert('Errore nel salvataggio.');return}
+  document.getElementById('c_success').style.display='block';
+  setTimeout(()=>{closeForm('contribute');document.getElementById('c_success').style.display='none'},2500);
+}
+
+async function submitClaim() {
+  const barName=document.getElementById('cl_bar').value.trim();
+  const ownerName=document.getElementById('cl_owner').value.trim();
+  const email=document.getElementById('cl_email').value.trim();
+  if(!barName||!ownerName||!email){alert('Compila i campi obbligatori (*)');return}
+  await db.from('claims').insert({bar_name:barName,owner_name:ownerName,email,phone:document.getElementById('cl_phone').value.trim(),message:document.getElementById('cl_msg').value.trim()});
+  document.getElementById('cl_success').style.display='block';
+  setTimeout(()=>{closeForm('claim');document.getElementById('cl_success').style.display='none'},2500);
+}
+
+document.getElementById('searchInput').addEventListener('input',applyFilters);
+document.getElementById('sortSelect').addEventListener('change',applyFilters);
+initMap();
+loadData();
+</script>
+</body>
+</html>
