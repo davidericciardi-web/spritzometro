@@ -883,6 +883,18 @@ async function submitClaim() {
   await db.from('claims').insert({bar_name:barName,owner_name:ownerName,email,phone:document.getElementById('cl_phone').value.trim(),message:document.getElementById('cl_msg').value.trim()});
   document.getElementById('cl_success').style.display='block';
   setTimeout(()=>{closeForm('claim');document.getElementById('cl_success').style.display='none'},2500);
+  // Email notification bhejo
+  await fetch('/api/notify-claim', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+   body: JSON.stringify({
+    bar_name: barName,
+    owner_name: ownerName,
+    email,
+    phone: document.getElementById('cl_phone').value.trim(),
+    message: document.getElementById('cl_msg').value.trim()
+  })
+});
 }
 
 document.getElementById('searchInput').addEventListener('input',applyFilters);
