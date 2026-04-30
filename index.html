@@ -887,7 +887,7 @@ async function submitClaim() {
   await fetch('/api/notify-claim', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
-   body: JSON.stringify({
+  body: JSON.stringify({
     bar_name: barName,
     owner_name: ownerName,
     email,
