@@ -550,30 +550,24 @@
     <button class="form-close" onclick="closeForm('contribute')">✕</button>
   </div>
   <div class="form-body">
-    <div class="field-row">
-      <div class="field">
-        <label class="field-label">Nome del Bar *</label>
-        <input class="field-input" id="c_name" placeholder="Es. Bar Centrale"/>
-      </div>
-      <div class="field">
-        <label class="field-label">Città *</label>
-        <select class="field-select" id="c_city">
-          <option value="">Seleziona...</option>
-          <option>Milano</option><option>Roma</option><option>Napoli</option>
-          <option>Venezia</option><option>Firenze</option><option>Torino</option>
-          <option>Bologna</option><option>Palermo</option><option>Verona</option><option>Altra</option>
-        </select>
-      </div>
+    <div class="field">
+      <label class="field-label">Cerca il Bar su Google Maps *</label>
+      <input class="field-input" id="c_places_search" placeholder="Es. Bar Basso, Milano..." autocomplete="off"/>
+      <div style="font-size:11px;color:#6a6660;margin-top:4px;">Cerca e seleziona il bar dalla lista — le coordinate verranno salvate automaticamente</div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label class="field-label">Prezzo Aperol Spritz (€) *</label>
-        <input class="field-input" id="c_price" type="number" placeholder="4.50" step="0.5" min="1" max="25"/>
-      </div>
-      <div class="field">
-        <label class="field-label">Indirizzo</label>
-        <input class="field-input" id="c_address" placeholder="Via Roma 12"/>
-      </div>
+    <div id="c_selected_bar" style="display:none;background:rgba(255,255,255,0.06);border:1px solid rgba(240,90,40,0.4);border-radius:5px;padding:10px 12px;margin-bottom:12px;">
+      <div style="font-size:12px;color:#F05A28;font-weight:600;margin-bottom:3px;">✓ Bar selezionato</div>
+      <div id="c_selected_name" style="font-size:13px;color:white;font-weight:600;"></div>
+      <div id="c_selected_addr" style="font-size:11px;color:#9a9690;margin-top:2px;"></div>
+    </div>
+    <input type="hidden" id="c_name"/>
+    <input type="hidden" id="c_city"/>
+    <input type="hidden" id="c_address"/>
+    <input type="hidden" id="c_lat"/>
+    <input type="hidden" id="c_lng"/>
+    <div class="field">
+      <label class="field-label">Prezzo Aperol Spritz (€) *</label>
+      <input class="field-input" id="c_price" type="number" placeholder="Es. 4.50" step="0.50" min="1" max="25"/>
     </div>
     <div class="field">
       <label class="field-label">Note (opzionale)</label>
@@ -836,22 +830,10 @@ function selectBar(id, flyTo=true) {
 }
 
 function setupRealtime() {
-  db.channel('live-all')
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prices'},async payload=>{
+  db.channel('live')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prices'},payload=>{
       const bar=allBars.find(b=>b.id===payload.new.bar_id);
-      if(bar){
-        bar.latestPrice=payload.new.price;
-        bar.calledAt=payload.new.called_at;
-        bar.source=payload.new.source;
-        updateStats();updateTicker();applyFilters();
-      } else {
-        // Price came for unknown bar — reload all data
-        await loadData();
-      }
-    })
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'bars'},async payload=>{
-      // Issue 1 PERMANENT FIX — reload fresh data from DB for ALL devices
-      await loadData();
+      if(bar){bar.latestPrice=payload.new.price;bar.calledAt=payload.new.called_at;bar.source=payload.new.source;updateStats();updateTicker();applyFilters();}
     })
     .subscribe();
 }
@@ -867,69 +849,102 @@ function closeForm(type) {
   document.getElementById(type+'Overlay').classList.remove('open');
 }
 
-// Issue 2 PERMANENT FIX — use Nominatim (free, no API key, no restrictions)
-async function geocodeAddress(address, city) {
-  const cityMap = {
-    'Milano': 'Milan', 'Roma': 'Rome', 'Napoli': 'Naples',
-    'Venezia': 'Venice', 'Firenze': 'Florence', 'Torino': 'Turin',
-    'Bologna': 'Bologna', 'Palermo': 'Palermo', 'Verona': 'Verona'
-  };
-  const englishCity = cityMap[city] || city;
+// ── GOOGLE PLACES AUTOCOMPLETE ──
+let placesAutocomplete = null;
 
-  try {
-    // Try full address first
-    if (address) {
-      const q = encodeURIComponent(`${address}, ${englishCity}, Italy`);
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&countrycodes=it`);
-      const data = await res.json();
-      if (data && data.length > 0) {
-        return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+function initPlacesAutocomplete() {
+  const input = document.getElementById('c_places_search');
+  if (!input || !window.google) return;
+
+  placesAutocomplete = new google.maps.places.Autocomplete(input, {
+    types: ['establishment'],
+    componentRestrictions: { country: 'it' },
+    fields: ['name', 'formatted_address', 'geometry', 'address_components']
+  });
+
+  placesAutocomplete.addListener('place_changed', () => {
+    const place = placesAutocomplete.getPlace();
+    if (!place.geometry) return;
+
+    // Extract city from address components
+    let city = '';
+    const cityTypes = ['locality', 'administrative_area_level_3'];
+    for (const comp of (place.address_components || [])) {
+      if (comp.types.some(t => cityTypes.includes(t))) {
+        city = comp.long_name;
+        break;
       }
     }
 
-    // Fallback: just city center
-    const q2 = encodeURIComponent(`${englishCity}, Italy`);
-    const res2 = await fetch(`https://nominatim.openstreetmap.org/search?q=${q2}&format=json&limit=1&countrycodes=it`);
-    const data2 = await res2.json();
-    if (data2 && data2.length > 0) {
-      return { latitude: parseFloat(data2[0].lat), longitude: parseFloat(data2[0].lon) };
-    }
-  } catch(e) { console.error('Geocode error:', e); }
-  return { latitude: null, longitude: null };
+    // Save to hidden fields
+    document.getElementById('c_name').value = place.name || '';
+    document.getElementById('c_city').value = city || '';
+    document.getElementById('c_address').value = place.formatted_address || '';
+    document.getElementById('c_lat').value = place.geometry.location.lat();
+    document.getElementById('c_lng').value = place.geometry.location.lng();
+
+    // Show selected bar info
+    document.getElementById('c_selected_name').textContent = place.name;
+    document.getElementById('c_selected_addr').textContent = place.formatted_address;
+    document.getElementById('c_selected_bar').style.display = 'block';
+  });
 }
+
+// Style Google autocomplete dropdown for dark form
+const style = document.createElement('style');
+style.textContent = `.pac-container{background:#1C1812;border:1px solid rgba(255,255,255,0.1);border-radius:6px;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4)}.pac-item{padding:8px 12px;color:#c8c4be;font-family:'DM Sans',sans-serif;font-size:13px;border-top:1px solid rgba(255,255,255,0.06);cursor:pointer}.pac-item:hover{background:rgba(240,90,40,0.15)}.pac-item-query{color:white;font-weight:600}.pac-icon{display:none}`;
+document.head.appendChild(style);
+
 async function submitContribute() {
-  const name=document.getElementById('c_name').value.trim();
-  const city=document.getElementById('c_city').value;
-  const price=parseFloat(document.getElementById('c_price').value);
-  const addr=document.getElementById('c_address').value.trim();
-  if(!name||!city||!price){alert('Compila i campi obbligatori (*)');return}
+  const name = document.getElementById('c_name').value.trim();
+  const city = document.getElementById('c_city').value.trim();
+  const price = parseFloat(document.getElementById('c_price').value);
+  const addr = document.getElementById('c_address').value.trim();
+  const lat = parseFloat(document.getElementById('c_lat').value);
+  const lng = parseFloat(document.getElementById('c_lng').value);
+
+  if (!name) { alert('Cerca e seleziona un bar dalla lista Google Maps'); return; }
+  if (!price) { alert('Inserisci il prezzo dello spritz'); return; }
 
   let barId;
-  const existing=allBars.find(b=>b.name.toLowerCase()===name.toLowerCase()&&b.city===city);
+  const existing = allBars.find(b =>
+    b.name.toLowerCase() === name.toLowerCase() &&
+    (b.city || '').toLowerCase() === (city || '').toLowerCase()
+  );
 
-  if(existing){
-    barId=existing.id;
+  if (existing) {
+    barId = existing.id;
   } else {
-    // Always geocode — with address or just city as fallback
-    const coords = await geocodeAddress(addr || name, city);
-
-    const{data,error}=await db.from('bars').insert({
-      name, city,
-      address: addr || null,
+    const { data, error } = await db.from('bars').insert({
+      name, city, address: addr,
       source: 'user_submit',
-      latitude: coords.latitude,
-      longitude: coords.longitude
+      latitude: isNaN(lat) ? null : lat,
+      longitude: isNaN(lng) ? null : lng
     }).select().single();
-
-    if(error){alert('Errore. Riprova.');return}
-    barId=data.id;
-    // Realtime will trigger loadData() for all devices automatically
+    if (error) { alert('Errore nel salvataggio. Riprova.'); return; }
+    barId = data.id;
   }
 
-  const{error}=await db.from('prices').insert({bar_id:barId, price, source:'user_submit'});
-  if(error){alert('Errore nel salvataggio.');return}
-  document.getElementById('c_success').style.display='block';
-  setTimeout(()=>{closeForm('contribute');document.getElementById('c_success').style.display='none'},2500);
+  const { error } = await db.from('prices').insert({
+    bar_id: barId, price, source: 'user_submit'
+  });
+  if (error) { alert('Errore nel salvataggio del prezzo.'); return; }
+
+  // Reset form
+  document.getElementById('c_places_search').value = '';
+  document.getElementById('c_selected_bar').style.display = 'none';
+  document.getElementById('c_name').value = '';
+  document.getElementById('c_city').value = '';
+  document.getElementById('c_address').value = '';
+  document.getElementById('c_lat').value = '';
+  document.getElementById('c_lng').value = '';
+  document.getElementById('c_price').value = '';
+
+  document.getElementById('c_success').style.display = 'block';
+  setTimeout(() => {
+    closeForm('contribute');
+    document.getElementById('c_success').style.display = 'none';
+  }, 2500);
 }
 
 async function submitClaim() {
@@ -947,5 +962,8 @@ document.getElementById('sortSelect').addEventListener('change',applyFilters);
 initMap();
 loadData();
 </script>
+
+<!-- Google Places API -->
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZpKZy9Wapnu2Uw3gfzSmUue0Cxhe05lc&libraries=places&callback=initPlacesAutocomplete" async defer></script>
 </body>
 </html>
