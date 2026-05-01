@@ -862,9 +862,7 @@ function closeForm(type) {
   document.getElementById(type+'Overlay').classList.remove('open');
 }
 
-// ── GEOAPIFY AUTOCOMPLETE — Free, no card required ──
-const GEOAPIFY_KEY = 'b02aecfd9f46450685031b032223a8c2';
-
+// ── NOMINATIM AUTOCOMPLETE — Free, no API key, permanent ──
 function initPlacesAutocomplete() {
   const wrap = document.getElementById('c_places_wrap');
   if (!wrap) return;
@@ -877,13 +875,13 @@ function initPlacesAutocomplete() {
   wrap.appendChild(input);
 
   const dropdown = document.createElement('div');
-  dropdown.id = 'geo_dropdown';
+  dropdown.id = 'nom_dropdown';
   dropdown.style.cssText = `display:none;position:absolute;z-index:9999;background:#1C1812;border:1px solid rgba(255,255,255,0.1);border-radius:6px;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.6);width:100%;max-height:240px;overflow-y:auto;`;
   wrap.style.position = 'relative';
   wrap.appendChild(dropdown);
 
   const s = document.createElement('style');
-  s.textContent = `#c_places_input:focus{border-color:#F05A28!important}#c_places_input::placeholder{color:#5a5650}.geo-item{padding:10px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06)}.geo-item:hover{background:rgba(240,90,40,0.15)}.geo-name{font-weight:600;color:white;font-size:13px;margin-bottom:2px}.geo-addr{font-size:11px;color:#6a6660}`;
+  s.textContent = `#c_places_input:focus{border-color:#F05A28!important}#c_places_input::placeholder{color:#5a5650}.nom-item{padding:10px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06)}.nom-item:hover{background:rgba(240,90,40,0.15)}.nom-name{font-weight:600;color:white;font-size:13px;margin-bottom:2px}.nom-addr{font-size:11px;color:#6a6660}`;
   document.head.appendChild(s);
 
   let timer;
@@ -891,7 +889,7 @@ function initPlacesAutocomplete() {
     clearTimeout(timer);
     const q = input.value.trim();
     if (q.length < 2) { dropdown.style.display='none'; return; }
-    timer = setTimeout(() => fetchSuggestions(q, dropdown), 350);
+    timer = setTimeout(() => fetchSuggestions(q, dropdown), 400);
   });
 
   input.addEventListener('focus', () => { input.style.borderColor='#F05A28'; });
@@ -903,34 +901,41 @@ function initPlacesAutocomplete() {
 
 async function fetchSuggestions(query, dropdown) {
   try {
-    const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&filter=countrycode:it&type=amenity&format=json&limit=6&apiKey=${GEOAPIFY_KEY}`;
-    const res = await fetch(url);
+    // Nominatim — free, no key, no restrictions
+    const url = `https://nominatim.openstreetmap.org/search?` +
+      `q=${encodeURIComponent(query + ' Italy')}&` +
+      `format=json&limit=6&countrycodes=it&` +
+      `addressdetails=1&extratags=1&namedetails=1`;
+
+    const res = await fetch(url, {
+      headers: { 'Accept-Language': 'it,en' }
+    });
     const data = await res.json();
     dropdown.innerHTML = '';
 
-    const results = data.results || [];
-    if (!results.length) { dropdown.style.display='none'; return; }
+    if (!data.length) { dropdown.style.display='none'; return; }
 
-    results.forEach(r => {
-      const name = r.name || r.address_line1 || query;
-      const addr = r.formatted || r.address_line2 || '';
-      const lat = r.lat;
-      const lng = r.lon;
-      const city = r.city || r.town || r.village || r.county || '';
+    data.forEach(r => {
+      const addr = r.address || {};
+      const name = r.namedetails?.name || r.display_name.split(',')[0];
+      const city = addr.city || addr.town || addr.village || addr.county || '';
+      const fullAddr = r.display_name;
+      const lat = parseFloat(r.lat);
+      const lng = parseFloat(r.lon);
 
       const item = document.createElement('div');
-      item.className = 'geo-item';
-      item.innerHTML = `<div class="geo-name">${name}</div><div class="geo-addr">${addr}</div>`;
+      item.className = 'nom-item';
+      item.innerHTML = `<div class="nom-name">${name}</div><div class="nom-addr">${fullAddr}</div>`;
 
       item.addEventListener('mousedown', () => {
         document.getElementById('c_places_input').value = name;
         document.getElementById('c_name').value = name;
         document.getElementById('c_city').value = city;
-        document.getElementById('c_address').value = addr;
+        document.getElementById('c_address').value = fullAddr;
         document.getElementById('c_lat').value = lat;
         document.getElementById('c_lng').value = lng;
         document.getElementById('c_selected_name').textContent = name;
-        document.getElementById('c_selected_addr').textContent = addr;
+        document.getElementById('c_selected_addr').textContent = fullAddr;
         document.getElementById('c_selected_bar').style.display = 'block';
         dropdown.style.display = 'none';
       });
@@ -938,9 +943,9 @@ async function fetchSuggestions(query, dropdown) {
       dropdown.appendChild(item);
     });
 
-    dropdown.style.display = 'block';
+    dropdown.style.display = data.length ? 'block' : 'none';
   } catch(e) {
-    console.error('Geoapify error:', e);
+    console.error('Nominatim error:', e);
     dropdown.style.display = 'none';
   }
 }
