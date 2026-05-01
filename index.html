@@ -869,28 +869,34 @@ function closeForm(type) {
 
 // Issue 2 PERMANENT FIX — use Nominatim (free, no API key, no restrictions)
 async function geocodeAddress(address, city) {
+  const cityMap = {
+    'Milano': 'Milan', 'Roma': 'Rome', 'Napoli': 'Naples',
+    'Venezia': 'Venice', 'Firenze': 'Florence', 'Torino': 'Turin',
+    'Bologna': 'Bologna', 'Palermo': 'Palermo', 'Verona': 'Verona'
+  };
+  const englishCity = cityMap[city] || city;
+
   try {
-    const query = encodeURIComponent(`${address}, ${city}, Italy`);
-    const res = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`,
-      { headers: { 'Accept-Language': 'it' } }
-    );
-    const data = await res.json();
-    if (data && data.length > 0) {
-      return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+    // Try full address first
+    if (address) {
+      const q = encodeURIComponent(`${address}, ${englishCity}, Italy`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${q}&format=json&limit=1&countrycodes=it`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+      }
     }
-    // Fallback: try just city name
-    const cityRes = await fetch(
-      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city+', Italy')}&format=json&limit=1`
-    );
-    const cityData = await cityRes.json();
-    if (cityData && cityData.length > 0) {
-      return { latitude: parseFloat(cityData[0].lat), longitude: parseFloat(cityData[0].lon) };
+
+    // Fallback: just city center
+    const q2 = encodeURIComponent(`${englishCity}, Italy`);
+    const res2 = await fetch(`https://nominatim.openstreetmap.org/search?q=${q2}&format=json&limit=1&countrycodes=it`);
+    const data2 = await res2.json();
+    if (data2 && data2.length > 0) {
+      return { latitude: parseFloat(data2[0].lat), longitude: parseFloat(data2[0].lon) };
     }
   } catch(e) { console.error('Geocode error:', e); }
   return { latitude: null, longitude: null };
 }
-
 async function submitContribute() {
   const name=document.getElementById('c_name').value.trim();
   const city=document.getElementById('c_city').value;
