@@ -552,11 +552,11 @@
   <div class="form-body">
     <div class="field">
       <label class="field-label">Cerca il Bar su Google Maps *</label>
-      <input class="field-input" id="c_places_search" placeholder="Es. Bar Basso, Milano..." autocomplete="off"/>
-      <div style="font-size:11px;color:#6a6660;margin-top:4px;">Cerca e seleziona il bar dalla lista — le coordinate verranno salvate automaticamente</div>
+      <div id="c_places_wrap" style="width:100%"></div>
+      <div style="font-size:11px;color:#6a6660;margin-top:5px;">Cerca e seleziona il bar — le coordinate vengono salvate automaticamente</div>
     </div>
-    <div id="c_selected_bar" style="display:none;background:rgba(255,255,255,0.06);border:1px solid rgba(240,90,40,0.4);border-radius:5px;padding:10px 12px;margin-bottom:12px;">
-      <div style="font-size:12px;color:#F05A28;font-weight:600;margin-bottom:3px;">✓ Bar selezionato</div>
+    <div id="c_selected_bar" style="display:none;background:rgba(240,90,40,0.1);border:1px solid rgba(240,90,40,0.4);border-radius:5px;padding:10px 12px;margin-bottom:4px;">
+      <div style="font-size:10px;color:#F05A28;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">✓ Bar selezionato</div>
       <div id="c_selected_name" style="font-size:13px;color:white;font-weight:600;"></div>
       <div id="c_selected_addr" style="font-size:11px;color:#9a9690;margin-top:2px;"></div>
     </div>
@@ -575,7 +575,6 @@
     </div>
     <button class="form-submit" onclick="submitContribute()">Invia Prezzo</button>
     <div class="form-success" id="c_success">✅ Grazie! Il tuo contributo è stato ricevuto.</div>
-
     <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);">
       <div style="font-size:12px;color:#6a6660;margin-bottom:12px;">Sei il proprietario del bar?</div>
       <button onclick="closeForm('contribute');openForm('claim')"
@@ -830,10 +829,24 @@ function selectBar(id, flyTo=true) {
 }
 
 function setupRealtime() {
-  db.channel('live')
+  db.channel('live-v2')
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'prices'},payload=>{
-      const bar=allBars.find(b=>b.id===payload.new.bar_id);
-      if(bar){bar.latestPrice=payload.new.price;bar.calledAt=payload.new.called_at;bar.source=payload.new.source;updateStats();updateTicker();applyFilters();}
+      const bar = allBars.find(b=>b.id===payload.new.bar_id);
+      if(bar){
+        bar.latestPrice=payload.new.price;
+        bar.calledAt=payload.new.called_at;
+        bar.source=payload.new.source;
+        updateStats();updateTicker();applyFilters();
+      }
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'bars'},payload=>{
+      const newBar = payload.new;
+      if(!allBars.find(b=>b.id===newBar.id)){
+        allBars.push({...newBar, latestPrice:null, calledAt:null, isNew:true, prices:[]});
+        buildCityFilters();
+        updateStats();
+        applyFilters();
+      }
     })
     .subscribe();
 }
@@ -850,50 +863,61 @@ function closeForm(type) {
 }
 
 // ── GOOGLE PLACES AUTOCOMPLETE ──
-let placesAutocomplete = null;
+async function initPlacesAutocomplete() {
+  try {
+    const {PlaceAutocompleteElement} = await google.maps.importLibrary('places');
+    const wrap = document.getElementById('c_places_wrap');
+    if (!wrap) return;
 
-function initPlacesAutocomplete() {
-  const input = document.getElementById('c_places_search');
-  if (!input || !window.google) return;
+    const el = new PlaceAutocompleteElement({
+      componentRestrictions: {country: 'it'},
+      types: ['establishment']
+    });
 
-  placesAutocomplete = new google.maps.places.Autocomplete(input, {
-    types: ['establishment'],
-    componentRestrictions: { country: 'it' },
-    fields: ['name', 'formatted_address', 'geometry', 'address_components']
-  });
+    el.style.cssText = 'width:100%;display:block;';
+    wrap.appendChild(el);
 
-  placesAutocomplete.addListener('place_changed', () => {
-    const place = placesAutocomplete.getPlace();
-    if (!place.geometry) return;
-
-    // Extract city from address components
-    let city = '';
-    const cityTypes = ['locality', 'administrative_area_level_3'];
-    for (const comp of (place.address_components || [])) {
-      if (comp.types.some(t => cityTypes.includes(t))) {
-        city = comp.long_name;
-        break;
+    // Style the element
+    const s = document.createElement('style');
+    s.textContent = `
+      gmp-place-autocomplete{width:100%}
+      gmp-place-autocomplete input{
+        width:100%!important;
+        background:rgba(255,255,255,0.06)!important;
+        border:1px solid rgba(255,255,255,0.1)!important;
+        border-radius:5px!important;
+        padding:9px 12px!important;
+        font-size:13px!important;
+        font-family:'DM Sans',sans-serif!important;
+        color:white!important;
+        outline:none!important;
       }
-    }
+      gmp-place-autocomplete input:focus{border-color:#F05A28!important}
+      gmp-place-autocomplete input::placeholder{color:#5a5650!important}
+    `;
+    document.head.appendChild(s);
 
-    // Save to hidden fields
-    document.getElementById('c_name').value = place.name || '';
-    document.getElementById('c_city').value = city || '';
-    document.getElementById('c_address').value = place.formatted_address || '';
-    document.getElementById('c_lat').value = place.geometry.location.lat();
-    document.getElementById('c_lng').value = place.geometry.location.lng();
+    el.addEventListener('gmp-placeselect', async ({place}) => {
+      await place.fetchFields({fields:['displayName','formattedAddress','location','addressComponents']});
 
-    // Show selected bar info
-    document.getElementById('c_selected_name').textContent = place.name;
-    document.getElementById('c_selected_addr').textContent = place.formatted_address;
-    document.getElementById('c_selected_bar').style.display = 'block';
-  });
+      let city = '';
+      for (const comp of (place.addressComponents || [])) {
+        if (comp.types.includes('locality') || comp.types.includes('administrative_area_level_3')) {
+          city = comp.longText; break;
+        }
+      }
+
+      document.getElementById('c_name').value = place.displayName || '';
+      document.getElementById('c_city').value = city;
+      document.getElementById('c_address').value = place.formattedAddress || '';
+      document.getElementById('c_lat').value = place.location.lat();
+      document.getElementById('c_lng').value = place.location.lng();
+      document.getElementById('c_selected_name').textContent = place.displayName;
+      document.getElementById('c_selected_addr').textContent = place.formattedAddress;
+      document.getElementById('c_selected_bar').style.display = 'block';
+    });
+  } catch(e) { console.error('Places init error:', e); }
 }
-
-// Style Google autocomplete dropdown for dark form
-const style = document.createElement('style');
-style.textContent = `.pac-container{background:#1C1812;border:1px solid rgba(255,255,255,0.1);border-radius:6px;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,0.4)}.pac-item{padding:8px 12px;color:#c8c4be;font-family:'DM Sans',sans-serif;font-size:13px;border-top:1px solid rgba(255,255,255,0.06);cursor:pointer}.pac-item:hover{background:rgba(240,90,40,0.15)}.pac-item-query{color:white;font-weight:600}.pac-icon{display:none}`;
-document.head.appendChild(style);
 
 async function submitContribute() {
   const name = document.getElementById('c_name').value.trim();
@@ -903,48 +927,69 @@ async function submitContribute() {
   const lat = parseFloat(document.getElementById('c_lat').value);
   const lng = parseFloat(document.getElementById('c_lng').value);
 
-  if (!name) { alert('Cerca e seleziona un bar dalla lista Google Maps'); return; }
-  if (!price) { alert('Inserisci il prezzo dello spritz'); return; }
+  if(!name){alert('Cerca e seleziona un bar dalla lista Google Maps');return}
+  if(!price){alert('Inserisci il prezzo dello spritz');return}
 
   let barId;
-  const existing = allBars.find(b =>
-    b.name.toLowerCase() === name.toLowerCase() &&
-    (b.city || '').toLowerCase() === (city || '').toLowerCase()
+  const existing = allBars.find(b=>
+    b.name.toLowerCase()===name.toLowerCase() &&
+    (b.city||'').toLowerCase()===(city||'').toLowerCase()
   );
 
-  if (existing) {
+  if(existing){
     barId = existing.id;
   } else {
-    const { data, error } = await db.from('bars').insert({
-      name, city, address: addr,
-      source: 'user_submit',
-      latitude: isNaN(lat) ? null : lat,
-      longitude: isNaN(lng) ? null : lng
+    const{data,error}=await db.from('bars').insert({
+      name, city, address:addr, source:'user_submit',
+      latitude: isNaN(lat)?null:lat,
+      longitude: isNaN(lng)?null:lng
     }).select().single();
-    if (error) { alert('Errore nel salvataggio. Riprova.'); return; }
+    if(error){alert('Errore nel salvataggio. Riprova.');return}
     barId = data.id;
+
+    // Foran local mein add karo — sab devices par realtime se aayega
+    const newBar = {...data, latestPrice:price, calledAt:new Date().toISOString(), source:'user_submit', isNew:true, prices:[]};
+    allBars.push(newBar);
+    buildCityFilters();
+    updateStats();
+    applyFilters();
+
+    // Map par foran dikhao
+    if(!isNaN(lat) && !isNaN(lng)){
+      const m = L.marker([lat,lng],{icon:makeMarker(price)});
+      const mapsUrl=`https://www.google.com/maps/search/${encodeURIComponent(name+' '+addr)}`;
+      m.bindPopup(`<div class="popup-inner">
+        <div class="popup-name">${name}</div>
+        <div class="popup-price">€${price.toFixed(2)}</div>
+        ${addr?`<div class="popup-addr">${addr}</div>`:''}
+        <a class="popup-maps" href="${mapsUrl}" target="_blank">Apri in Maps →</a>
+      </div>`,{maxWidth:240});
+      m.addTo(map); markers[barId]=m;
+      map.flyTo([lat,lng],15,{duration:1});
+      m.openPopup();
+    }
   }
 
-  const { error } = await db.from('prices').insert({
-    bar_id: barId, price, source: 'user_submit'
-  });
-  if (error) { alert('Errore nel salvataggio del prezzo.'); return; }
+  const{error}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
+  if(error){alert('Errore nel salvataggio del prezzo.');return}
+
+  // Update price on existing bar foran
+  const bar = allBars.find(b=>b.id===barId);
+  if(bar && !existing){
+    // already added above
+  } else if(bar && existing){
+    bar.latestPrice=price;bar.calledAt=new Date().toISOString();bar.source='user_submit';
+    updateStats();updateTicker();applyFilters();
+  }
 
   // Reset form
-  document.getElementById('c_places_search').value = '';
-  document.getElementById('c_selected_bar').style.display = 'none';
-  document.getElementById('c_name').value = '';
-  document.getElementById('c_city').value = '';
-  document.getElementById('c_address').value = '';
-  document.getElementById('c_lat').value = '';
-  document.getElementById('c_lng').value = '';
-  document.getElementById('c_price').value = '';
-
-  document.getElementById('c_success').style.display = 'block';
-  setTimeout(() => {
-    closeForm('contribute');
-    document.getElementById('c_success').style.display = 'none';
-  }, 2500);
+  document.getElementById('c_places_wrap').innerHTML='';
+  initPlacesAutocomplete();
+  document.getElementById('c_selected_bar').style.display='none';
+  ['c_name','c_city','c_address','c_lat','c_lng'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('c_price').value='';
+  document.getElementById('c_success').style.display='block';
+  setTimeout(()=>{closeForm('contribute');document.getElementById('c_success').style.display='none'},2500);
 }
 
 async function submitClaim() {
@@ -962,8 +1007,9 @@ document.getElementById('sortSelect').addEventListener('change',applyFilters);
 initMap();
 loadData();
 </script>
-
-<!-- Google Places API -->
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZpKZy9Wapnu2Uw3gfzSmUue0Cxhe05lc&libraries=places&callback=initPlacesAutocomplete" async defer></script>
+<script>
+window.initPlacesAutocomplete = initPlacesAutocomplete;
+</script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAZpKZy9Wapnu2Uw3gfzSmUue0Cxhe05lc&libraries=places&loading=async&callback=initPlacesAutocomplete" async defer></script>
 </body>
 </html>
