@@ -836,21 +836,22 @@ function selectBar(id, flyTo=true) {
 }
 
 function setupRealtime() {
-  db.channel('live')
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prices'},payload=>{
+  db.channel('live-all')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prices'},async payload=>{
       const bar=allBars.find(b=>b.id===payload.new.bar_id);
-      if(bar){bar.latestPrice=payload.new.price;bar.calledAt=payload.new.called_at;bar.source=payload.new.source;updateStats();updateTicker();applyFilters();}
-    })
-    // Issue 1 fix — listen to new bars from ANY device
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'bars'},payload=>{
-      const newBar = payload.new;
-      const exists = allBars.find(b=>b.id===newBar.id);
-      if(!exists){
-        allBars.push({...newBar, latestPrice:null, calledAt:null, source:newBar.source, isNew:true, prices:[]});
-        buildCityFilters();
-        updateStats();
-        applyFilters();
+      if(bar){
+        bar.latestPrice=payload.new.price;
+        bar.calledAt=payload.new.called_at;
+        bar.source=payload.new.source;
+        updateStats();updateTicker();applyFilters();
+      } else {
+        // Price came for unknown bar — reload all data
+        await loadData();
       }
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'bars'},async payload=>{
+      // Issue 1 PERMANENT FIX — reload fresh data from DB for ALL devices
+      await loadData();
     })
     .subscribe();
 }
@@ -866,16 +867,25 @@ function closeForm(type) {
   document.getElementById(type+'Overlay').classList.remove('open');
 }
 
-// Issue 2 fix — geocode address using Google Maps
+// Issue 2 PERMANENT FIX — use Nominatim (free, no API key, no restrictions)
 async function geocodeAddress(address, city) {
-  const GMAPS_KEY = 'AIzaSyAZpKZy9Wapnu2Uw3gfzSmUue0Cxhe05lc';
   try {
-    const query = encodeURIComponent(`${address} ${city} Italy`);
-    const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${GMAPS_KEY}`);
+    const query = encodeURIComponent(`${address}, ${city}, Italy`);
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`,
+      { headers: { 'Accept-Language': 'it' } }
+    );
     const data = await res.json();
-    if (data.results && data.results.length > 0) {
-      const loc = data.results[0].geometry.location;
-      return { latitude: loc.lat, longitude: loc.lng };
+    if (data && data.length > 0) {
+      return { latitude: parseFloat(data[0].lat), longitude: parseFloat(data[0].lon) };
+    }
+    // Fallback: try just city name
+    const cityRes = await fetch(
+      `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(city+', Italy')}&format=json&limit=1`
+    );
+    const cityData = await cityRes.json();
+    if (cityData && cityData.length > 0) {
+      return { latitude: parseFloat(cityData[0].lat), longitude: parseFloat(cityData[0].lon) };
     }
   } catch(e) { console.error('Geocode error:', e); }
   return { latitude: null, longitude: null };
@@ -894,24 +904,23 @@ async function submitContribute() {
   if(existing){
     barId=existing.id;
   } else {
-    // Geocode address so it shows on map
-    let coords = { latitude: null, longitude: null };
-    if (addr) {
-      coords = await geocodeAddress(addr, city);
-    }
+    // Always geocode — with address or just city as fallback
+    const coords = await geocodeAddress(addr || name, city);
 
     const{data,error}=await db.from('bars').insert({
-      name, city, address:addr, source:'user_submit',
+      name, city,
+      address: addr || null,
+      source: 'user_submit',
       latitude: coords.latitude,
       longitude: coords.longitude
     }).select().single();
 
     if(error){alert('Errore. Riprova.');return}
     barId=data.id;
-    // Don't push locally — realtime will handle it for all devices
+    // Realtime will trigger loadData() for all devices automatically
   }
 
-  const{error}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
+  const{error}=await db.from('prices').insert({bar_id:barId, price, source:'user_submit'});
   if(error){alert('Errore nel salvataggio.');return}
   document.getElementById('c_success').style.display='block';
   setTimeout(()=>{closeForm('contribute');document.getElementById('c_success').style.display='none'},2500);
