@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="it">
 <head>
@@ -863,98 +864,64 @@ function closeForm(type) {
 }
 
 // ── GOOGLE PLACES AUTOCOMPLETE ──
-async function initPlacesAutocomplete() {
+function initPlacesAutocomplete() {
   const wrap = document.getElementById('c_places_wrap');
-  if (!wrap) return;
+  if (!wrap || !window.google) return;
+
+  // Create styled input
+  const input = document.createElement('input');
+  input.id = 'c_places_input';
+  input.placeholder = 'Es. Bar Basso, Milano...';
+  input.autocomplete = 'off';
+  input.style.cssText = `
+    width:100%;background:rgba(255,255,255,0.06);
+    border:1px solid rgba(255,255,255,0.1);border-radius:5px;
+    padding:9px 12px;font-size:13px;font-family:'DM Sans',sans-serif;
+    color:white;outline:none;box-sizing:border-box;
+  `;
+  wrap.appendChild(input);
+
+  // Focus style
+  input.addEventListener('focus', ()=>input.style.borderColor='#F05A28');
+  input.addEventListener('blur', ()=>input.style.borderColor='rgba(255,255,255,0.1)');
 
   // Style dropdown
   const s = document.createElement('style');
-  s.textContent = `
-    #c_places_wrap gmp-place-autocomplete{display:block;width:100%}
-    #c_places_wrap input{
-      width:100%!important;box-sizing:border-box!important;
-      background:rgba(255,255,255,0.06)!important;
-      border:1px solid rgba(255,255,255,0.1)!important;
-      border-radius:5px!important;padding:9px 12px!important;
-      font-size:13px!important;font-family:'DM Sans',sans-serif!important;
-      color:white!important;outline:none!important;
-    }
-    #c_places_wrap input:focus{border-color:#F05A28!important}
-    #c_places_wrap input::placeholder{color:#5a5650!important}
-    .pac-container{background:#1C1812!important;border:1px solid rgba(255,255,255,0.1)!important;border-radius:6px!important;margin-top:2px!important;box-shadow:0 8px 24px rgba(0,0,0,0.6)!important}
-    .pac-item{padding:8px 12px!important;color:#c8c4be!important;font-size:13px!important;border-top:1px solid rgba(255,255,255,0.06)!important;cursor:pointer!important}
-    .pac-item:hover,.pac-item-selected{background:rgba(240,90,40,0.15)!important}
-    .pac-item-query{color:white!important;font-weight:600!important}
-    .pac-icon{filter:invert(1)!important;opacity:0.4!important}
-  `;
+  s.textContent = `.pac-container{background:#1C1812!important;border:1px solid rgba(255,255,255,0.1)!important;border-radius:6px!important;margin-top:2px!important;box-shadow:0 8px 24px rgba(0,0,0,0.6)!important;font-family:'DM Sans',sans-serif!important}
+  .pac-item{padding:8px 12px!important;color:#c8c4be!important;font-size:13px!important;border-top:1px solid rgba(255,255,255,0.06)!important;cursor:pointer!important}
+  .pac-item:hover,.pac-item-selected{background:rgba(240,90,40,0.15)!important}
+  .pac-item-query{color:white!important;font-weight:600!important}
+  .pac-icon{filter:invert(1)!important;opacity:0.4!important}
+  .pac-logo::after{display:none!important}`;
   document.head.appendChild(s);
 
-  try {
-    await google.maps.importLibrary('places');
+  // Init Autocomplete
+  const autocomplete = new google.maps.places.Autocomplete(input, {
+    componentRestrictions: {country: 'it'},
+    types: ['establishment'],
+    fields: ['name','formatted_address','geometry','address_components']
+  });
 
-    const el = new google.maps.places.PlaceAutocompleteElement({
-      componentRestrictions: {country: 'it'},
-      types: ['establishment']
-    });
+  autocomplete.addListener('place_changed', () => {
+    const place = autocomplete.getPlace();
+    if (!place.geometry) return;
 
-    wrap.appendChild(el);
-
-    el.addEventListener('gmp-placeselect', async ({place}) => {
-      await place.fetchFields({
-        fields: ['displayName','formattedAddress','location','addressComponents']
-      });
-
-      let city = '';
-      for (const comp of (place.addressComponents || [])) {
-        if (comp.types.includes('locality') || comp.types.includes('administrative_area_level_3')) {
-          city = comp.longText; break;
-        }
+    let city = '';
+    for (const comp of (place.address_components || [])) {
+      if (comp.types.includes('locality') || comp.types.includes('administrative_area_level_3')) {
+        city = comp.long_name; break;
       }
+    }
 
-      document.getElementById('c_name').value = place.displayName || '';
-      document.getElementById('c_city').value = city;
-      document.getElementById('c_address').value = place.formattedAddress || '';
-      document.getElementById('c_lat').value = place.location.lat();
-      document.getElementById('c_lng').value = place.location.lng();
-      document.getElementById('c_selected_name').textContent = place.displayName;
-      document.getElementById('c_selected_addr').textContent = place.formattedAddress;
-      document.getElementById('c_selected_bar').style.display = 'block';
-    });
-
-  } catch(e) {
-    // Fallback to classic Autocomplete if new API fails
-    console.warn('PlaceAutocompleteElement failed, using fallback:', e);
-    const input = document.createElement('input');
-    input.id = 'c_places_input';
-    input.placeholder = 'Es. Bar Basso, Milano...';
-    input.autocomplete = 'off';
-    wrap.appendChild(input);
-
-    const autocomplete = new google.maps.places.Autocomplete(input, {
-      componentRestrictions: {country:'it'},
-      types: ['establishment'],
-      fields: ['name','formatted_address','geometry','address_components']
-    });
-
-    autocomplete.addListener('place_changed', () => {
-      const place = autocomplete.getPlace();
-      if (!place.geometry) return;
-      let city = '';
-      for (const comp of (place.address_components || [])) {
-        if (comp.types.includes('locality') || comp.types.includes('administrative_area_level_3')) {
-          city = comp.long_name; break;
-        }
-      }
-      document.getElementById('c_name').value = place.name || '';
-      document.getElementById('c_city').value = city;
-      document.getElementById('c_address').value = place.formatted_address || '';
-      document.getElementById('c_lat').value = place.geometry.location.lat();
-      document.getElementById('c_lng').value = place.geometry.location.lng();
-      document.getElementById('c_selected_name').textContent = place.name;
-      document.getElementById('c_selected_addr').textContent = place.formatted_address;
-      document.getElementById('c_selected_bar').style.display = 'block';
-    });
-  }
+    document.getElementById('c_name').value = place.name || '';
+    document.getElementById('c_city').value = city;
+    document.getElementById('c_address').value = place.formatted_address || '';
+    document.getElementById('c_lat').value = place.geometry.location.lat();
+    document.getElementById('c_lng').value = place.geometry.location.lng();
+    document.getElementById('c_selected_name').textContent = place.name;
+    document.getElementById('c_selected_addr').textContent = place.formatted_address;
+    document.getElementById('c_selected_bar').style.display = 'block';
+  });
 }
 
 async function submitContribute() {
