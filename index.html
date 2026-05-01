@@ -841,6 +841,17 @@ function setupRealtime() {
       const bar=allBars.find(b=>b.id===payload.new.bar_id);
       if(bar){bar.latestPrice=payload.new.price;bar.calledAt=payload.new.called_at;bar.source=payload.new.source;updateStats();updateTicker();applyFilters();}
     })
+    // Issue 1 fix — listen to new bars from ANY device
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'bars'},payload=>{
+      const newBar = payload.new;
+      const exists = allBars.find(b=>b.id===newBar.id);
+      if(!exists){
+        allBars.push({...newBar, latestPrice:null, calledAt:null, source:newBar.source, isNew:true, prices:[]});
+        buildCityFilters();
+        updateStats();
+        applyFilters();
+      }
+    })
     .subscribe();
 }
 
@@ -855,20 +866,51 @@ function closeForm(type) {
   document.getElementById(type+'Overlay').classList.remove('open');
 }
 
+// Issue 2 fix — geocode address using Google Maps
+async function geocodeAddress(address, city) {
+  const GMAPS_KEY = 'AIzaSyAZpKZy9Wapnu2Uw3gfzSmUue0Cxhe05lc';
+  try {
+    const query = encodeURIComponent(`${address} ${city} Italy`);
+    const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${query}&key=${GMAPS_KEY}`);
+    const data = await res.json();
+    if (data.results && data.results.length > 0) {
+      const loc = data.results[0].geometry.location;
+      return { latitude: loc.lat, longitude: loc.lng };
+    }
+  } catch(e) { console.error('Geocode error:', e); }
+  return { latitude: null, longitude: null };
+}
+
 async function submitContribute() {
   const name=document.getElementById('c_name').value.trim();
   const city=document.getElementById('c_city').value;
   const price=parseFloat(document.getElementById('c_price').value);
   const addr=document.getElementById('c_address').value.trim();
   if(!name||!city||!price){alert('Compila i campi obbligatori (*)');return}
+
   let barId;
   const existing=allBars.find(b=>b.name.toLowerCase()===name.toLowerCase()&&b.city===city);
-  if(existing){barId=existing.id}
-  else{
-    const{data,error}=await db.from('bars').insert({name,city,address:addr,source:'user_submit'}).select().single();
+
+  if(existing){
+    barId=existing.id;
+  } else {
+    // Geocode address so it shows on map
+    let coords = { latitude: null, longitude: null };
+    if (addr) {
+      coords = await geocodeAddress(addr, city);
+    }
+
+    const{data,error}=await db.from('bars').insert({
+      name, city, address:addr, source:'user_submit',
+      latitude: coords.latitude,
+      longitude: coords.longitude
+    }).select().single();
+
     if(error){alert('Errore. Riprova.');return}
-    barId=data.id; allBars.push({...data,latestPrice:null,prices:[]});
+    barId=data.id;
+    // Don't push locally — realtime will handle it for all devices
   }
+
   const{error}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
   if(error){alert('Errore nel salvataggio.');return}
   document.getElementById('c_success').style.display='block';
@@ -883,18 +925,6 @@ async function submitClaim() {
   await db.from('claims').insert({bar_name:barName,owner_name:ownerName,email,phone:document.getElementById('cl_phone').value.trim(),message:document.getElementById('cl_msg').value.trim()});
   document.getElementById('cl_success').style.display='block';
   setTimeout(()=>{closeForm('claim');document.getElementById('cl_success').style.display='none'},2500);
-  // Email notification bhejo
-  await fetch('/api/notify-claim', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    bar_name: barName,
-    owner_name: ownerName,
-    email,
-    phone: document.getElementById('cl_phone').value.trim(),
-    message: document.getElementById('cl_msg').value.trim()
-  })
-});
 }
 
 document.getElementById('searchInput').addEventListener('input',applyFilters);
