@@ -901,41 +901,26 @@ function initPlacesAutocomplete() {
 
 async function fetchSuggestions(query, dropdown) {
   try {
-    // Nominatim — free, no key, no restrictions
-    const url = `https://nominatim.openstreetmap.org/search?` +
-      `q=${encodeURIComponent(query + ' Italy')}&` +
-      `format=json&limit=6&countrycodes=it&` +
-      `addressdetails=1&extratags=1&namedetails=1`;
-
-    const res = await fetch(url, {
-      headers: { 'Accept-Language': 'it,en' }
-    });
+    const res = await fetch(`/api/geocode?query=${encodeURIComponent(query)}`);
     const data = await res.json();
     dropdown.innerHTML = '';
 
-    if (!data.length) { dropdown.style.display='none'; return; }
+    if (!data.results?.length) { dropdown.style.display='none'; return; }
 
-    data.forEach(r => {
-      const addr = r.address || {};
-      const name = r.namedetails?.name || r.display_name.split(',')[0];
-      const city = addr.city || addr.town || addr.village || addr.county || '';
-      const fullAddr = r.display_name;
-      const lat = parseFloat(r.lat);
-      const lng = parseFloat(r.lon);
-
+    data.results.forEach(r => {
       const item = document.createElement('div');
       item.className = 'nom-item';
-      item.innerHTML = `<div class="nom-name">${name}</div><div class="nom-addr">${fullAddr}</div>`;
+      item.innerHTML = `<div class="nom-name">${r.name}</div><div class="nom-addr">${r.address}</div>`;
 
       item.addEventListener('mousedown', () => {
-        document.getElementById('c_places_input').value = name;
-        document.getElementById('c_name').value = name;
-        document.getElementById('c_city').value = city;
-        document.getElementById('c_address').value = fullAddr;
-        document.getElementById('c_lat').value = lat;
-        document.getElementById('c_lng').value = lng;
-        document.getElementById('c_selected_name').textContent = name;
-        document.getElementById('c_selected_addr').textContent = fullAddr;
+        document.getElementById('c_places_input').value = r.name;
+        document.getElementById('c_name').value = r.name;
+        document.getElementById('c_city').value = r.city;
+        document.getElementById('c_address').value = r.address;
+        document.getElementById('c_lat').value = r.lat;
+        document.getElementById('c_lng').value = r.lng;
+        document.getElementById('c_selected_name').textContent = r.name;
+        document.getElementById('c_selected_addr').textContent = r.address;
         document.getElementById('c_selected_bar').style.display = 'block';
         dropdown.style.display = 'none';
       });
@@ -943,9 +928,9 @@ async function fetchSuggestions(query, dropdown) {
       dropdown.appendChild(item);
     });
 
-    dropdown.style.display = data.length ? 'block' : 'none';
+    dropdown.style.display = 'block';
   } catch(e) {
-    console.error('Nominatim error:', e);
+    console.error('Geocode error:', e);
     dropdown.style.display = 'none';
   }
 }
