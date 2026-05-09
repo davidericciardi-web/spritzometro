@@ -57,57 +57,11 @@ async function handleWeekReset(settings) {
     console.log('New week — resetting all bars for re-calling');
 
     // Reset last_called_at for all bars so they get called again
+    // NO bars are ever deleted — all bars stay permanently
     await supabase
       .from('bars')
-      .update({ last_called_at: null })
+      .update({ last_called_at: null, call_count: 0 })
       .neq('id', '00000000-0000-0000-0000-000000000000');
-
-    // Remove bars that never answered (3+ calls, no price)
-    const { data: failedBars } = await supabase
-      .from('bars')
-      .select('id')
-      .gte('call_count', 3);
-
-    if (failedBars && failedBars.length > 0) {
-      for (const bar of failedBars) {
-        const { data: prices } = await supabase
-          .from('prices')
-          .select('id')
-          .eq('bar_id', bar.id)
-          .limit(1);
-
-        if (!prices || prices.length === 0) {
-          await supabase.from('bars').delete().eq('id', bar.id);
-        }
-      }
-
-      // Fetch replacement bars from Google Maps
-      for (const city of CITIES) {
-        try {
-          const res = await axios.get(
-            'https://maps.googleapis.com/maps/api/place/textsearch/json',
-            { params: { query: `bar aperitivo ${city} Italy`, key: GMAPS_KEY, language: 'it' } }
-          );
-          for (const place of (res.data.results || []).slice(0, 5)) {
-            const det = await axios.get(
-              'https://maps.googleapis.com/maps/api/place/details/json',
-              { params: { place_id: place.place_id, fields: 'name,formatted_phone_number,formatted_address,geometry', key: GMAPS_KEY } }
-            );
-            const d = det.data.result;
-            if (!d.formatted_phone_number) continue;
-            await supabase.from('bars').insert({
-              name: d.name, address: d.formatted_address, city,
-              phone: d.formatted_phone_number,
-              latitude: d.geometry?.location?.lat,
-              longitude: d.geometry?.location?.lng,
-              place_id: place.place_id, call_count: 0, last_called_at: null
-            }).select();
-            await new Promise(r => setTimeout(r, 200));
-          }
-        } catch (e) { console.error(`Fetch error ${city}:`, e.message); }
-        await new Promise(r => setTimeout(r, 500));
-      }
-    }
 
     // Reset weekly counter
     await supabase.from('campaign_settings').update({
