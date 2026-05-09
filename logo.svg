@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF6B35"/>
+      <stop offset="100%" style="stop-color:#E8521A"/>
+    </linearGradient>
+    <linearGradient id="liq" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFA07A"/>
+      <stop offset="100%" style="stop-color:#FF6B35"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background rounded square -->
+  <rect width="120" height="120" rx="26" fill="#1C1812"/>
+
+  <!-- Map pin body -->
+  <ellipse cx="60" cy="46" rx="30" ry="30" fill="url(#bg)"/>
+  <path d="M60 16 C60 16 30 48 30 62 C30 78.5 43.5 92 60 92 C76.5 92 90 78.5 90 62 C90 48 60 16 60 16Z" fill="url(#bg)"/>
+
+  <!-- Glass inside -->
+  <path d="M48 32 L42 68 L78 68 L72 32 Z" fill="#fff" opacity="0.12"/>
+  <path d="M50.5 46 L43.5 68 L76.5 68 L69.5 46 Z" fill="url(#liq)" opacity="0.9"/>
+  <path d="M48 32 L42 68 L78 68 L72 32 Z" fill="none" stroke="#fff" stroke-width="2.5" stroke-linejoin="round"/>
+  <line x1="60" y1="68" x2="60" y2="78" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+  <line x1="50" y1="78" x2="70" y2="78" stroke="#fff" stroke-width="2.5" stroke-linecap="round"/>
+
+  <!-- Orange slice -->
+  <circle cx="74" cy="37" r="7" fill="#FFD580" opacity="0.95"/>
+  <circle cx="74" cy="37" r="7" fill="none" stroke="#FF9A2E" stroke-width="1"/>
+  <line x1="74" y1="30" x2="74" y2="44" stroke="#FF9A2E" stroke-width="1"/>
+  <line x1="67" y1="37" x2="81" y2="37" stroke="#FF9A2E" stroke-width="1"/>
+  <line x1="69" y1="32" x2="79" y2="42" stroke="#FF9A2E" stroke-width="0.8"/>
+  <line x1="79" y1="32" x2="69" y2="42" stroke="#FF9A2E" stroke-width="0.8"/>
+
+  <!-- Bubbles -->
+  <circle cx="52" cy="56" r="2" fill="#fff" opacity="0.6"/>
+  <circle cx="58" cy="62" r="1.5" fill="#fff" opacity="0.5"/>
+  <circle cx="66" cy="52" r="2" fill="#fff" opacity="0.55"/>
+
+  <!-- Pin dot -->
+  <circle cx="60" cy="95" r="3.5" fill="url(#bg)"/>
+
+  <!-- SM text below -->
+  <text x="60" y="114" font-family="Georgia, serif" font-size="11" font-weight="600" fill="#9E9690" text-anchor="middle" letter-spacing="0.1em">SM</text>
+</svg>
