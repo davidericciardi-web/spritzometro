@@ -1,21 +1,12 @@
 {
   "crons": [
-    {
-      "path": "/api/campaign",
-      "schedule": "0 8 * * 1-5"
-    },
-    {
-      "path": "/api/campaign",
-      "schedule": "0 15 * * 1-4"
-    }
-  ]
-  
-}
-{
-  "routes": [
-    {"src": "/blog", "dest": "/blog.html"},
-    {"src": "/blog/spritz-milano-sotto-5-euro", "dest": "/blog/spritz-milano-sotto-5-euro.html"},
-    {"src": "/blog/guida-spritz-roma", "dest": "/blog/guida-spritz-roma.html"},
-    {"src": "/blog/spritz-venezia-bacari", "dest": "/blog/spritz-venezia-bacari.html"}
+    { "path": "/api/campaign", "schedule": "0 8 * * 1-5" },
+    { "path": "/api/campaign", "schedule": "0 15 * * 1-4" }
+  ],
+  "rewrites": [
+    { "source": "/blog", "destination": "/blog.html" },
+    { "source": "/blog/spritz-milano-sotto-5-euro", "destination": "/blog/spritz-milano-sotto-5-euro.html" },
+    { "source": "/blog/guida-spritz-roma", "destination": "/blog/guida-spritz-roma.html" },
+    { "source": "/blog/spritz-venezia-bacari", "destination": "/blog/spritz-venezia-bacari.html" }
   ]
 }
