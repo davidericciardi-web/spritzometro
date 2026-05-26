@@ -3,14 +3,36 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>SpritzoMetro — Prezzi dello Spritz in Italia</title>
+  <!-- SEO: Optimized Title & Meta -->
+  <title>SpritzoMetro — Prezzi Aperol Spritz in Italia | Milano Roma Napoli Venezia Firenze</title>
+  <meta name="description" content="Scopri quanto costa uno Spritz nei bar di tutta Italia. Prezzi aggiornati di Aperol Spritz a Milano, Roma, Napoli, Venezia e Firenze. Trova il bar più economico vicino a te."/>
+  <meta name="keywords" content="prezzo spritz italia, aperol spritz milano, spritz roma prezzo, quanto costa uno spritz, bar spritz economico, spritz napoli venezia firenze"/>
+  <meta name="robots" content="index, follow"/>
+  <meta name="author" content="SpritzoMetro"/>
 
-  <!-- FAVICON — upload logo.png to GitHub repo root -->
+  <!-- Canonical -->
   <link rel="canonical" href="https://spritzometro.com"/>
-  <link rel="icon" type="image/png" href="/logo.svg"/>
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/logo.svg"/>
   <link rel="apple-touch-icon" href="/logo.svg"/>
 
-  <!-- Google Analytics — replace G-XXXXXXXXXX with your Measurement ID from analytics.google.com -->
+  <!-- Open Graph (WhatsApp, Facebook, LinkedIn) -->
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://spritzometro.com"/>
+  <meta property="og:title" content="SpritzoMetro — Prezzi Aperol Spritz in Italia"/>
+  <meta property="og:description" content="Scopri quanto costa uno Spritz nei bar di tutta Italia. Prezzi aggiornati a Milano, Roma, Napoli, Venezia e Firenze."/>
+  <meta property="og:image" content="https://spritzometro.com/og-image.png"/>
+  <meta property="og:locale" content="it_IT"/>
+  <meta property="og:site_name" content="SpritzoMetro"/>
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image"/>
+  <meta name="twitter:title" content="SpritzoMetro — Prezzi Aperol Spritz in Italia"/>
+  <meta name="twitter:description" content="Scopri quanto costa uno Spritz nei bar di tutta Italia."/>
+  <meta name="twitter:image" content="https://spritzometro.com/og-image.png"/>
+
+  <!-- Google Analytics -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-CR0LB8R0SZ"></script>
   <script>
     window.dataLayer = window.dataLayer || [];
@@ -18,6 +40,48 @@
     gtag('js', new Date());
     gtag('config', 'G-CR0LB8R0SZ');
   </script>
+
+  <!-- Schema Markup: WebSite + Organization + FAQPage -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebSite",
+        "@id": "https://spritzometro.com/#website",
+        "url": "https://spritzometro.com",
+        "name": "SpritzoMetro",
+        "description": "Indice dei prezzi dell'Aperol Spritz nei bar italiani",
+        "inLanguage": "it",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://spritzometro.com/?search={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      },
+      {
+        "@type": "Organization",
+        "@id": "https://spritzometro.com/#organization",
+        "name": "SpritzoMetro",
+        "url": "https://spritzometro.com",
+        "logo": "https://spritzometro.com/logo.svg"
+      },
+      {
+        "@type": "FAQPage",
+        "mainEntity": [
+          {"@type":"Question","name":"Quanto costa uno Spritz in Italia?","acceptedAnswer":{"@type":"Answer","text":"Il prezzo medio di un Aperol Spritz varia tra 4 e 9 euro a seconda della città e del locale."}},
+          {"@type":"Question","name":"Quanto costa uno Spritz a Milano?","acceptedAnswer":{"@type":"Answer","text":"A Milano il prezzo medio è tra 7 e 11 euro, con zone come Navigli e Brera dove i prezzi sono più alti."}},
+          {"@type":"Question","name":"Quanto costa uno Spritz a Roma?","acceptedAnswer":{"@type":"Answer","text":"A Roma il prezzo medio è tra 6 e 9 euro, con variazioni tra centro storico e quartieri periferici."}},
+          {"@type":"Question","name":"Quanto costa uno Spritz a Napoli?","acceptedAnswer":{"@type":"Answer","text":"A Napoli i prezzi sono tra i più competitivi, spesso tra 4 e 6 euro."}},
+          {"@type":"Question","name":"Quanto costa uno Spritz a Venezia?","acceptedAnswer":{"@type":"Answer","text":"A Venezia vicino a Piazza San Marco può arrivare a 10-12 euro, nei bacari locali è più conveniente."}},
+          {"@type":"Question","name":"Quanto costa uno Spritz a Firenze?","acceptedAnswer":{"@type":"Answer","text":"A Firenze il prezzo medio è tra 6 e 9 euro, con prezzi più alti nelle zone turistiche del centro."}},
+          {"@type":"Question","name":"Come funziona SpritzoMetro?","acceptedAnswer":{"@type":"Answer","text":"SpritzoMetro raccoglie i prezzi dell'Aperol Spritz tramite segnalazioni degli utenti e li mostra su una mappa interattiva."}}
+        ]
+      }
+    ]
+  }
+  </script>
+
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -52,14 +116,6 @@
       font-weight: 600;
       color: #FAFAF7;
       letter-spacing: -0.3px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .logo img {
-      height: 28px;
-      width: auto;
     }
 
     .logo em {
@@ -447,14 +503,14 @@
 </head>
 <body>
 
+<!-- H1 per SEO -->
+<h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">SpritzoMetro — Prezzi Aperol Spritz in Italia: Milano, Roma, Napoli, Venezia, Firenze</h1>
+
 <div class="top-loader" id="loader"></div>
 
 <!-- HEADER -->
 <header>
-  <div class="logo">
-    <img src="/logo.svg" alt="SpritzoMetro" onerror="this.style.display='none'"/>
-    Spritzo<em>Metro</em>
-  </div>
+  <div class="logo">Spritzo<em>Metro</em></div>
   <div class="live-wrap">
     <div class="live-dot"></div>
     <span id="liveCount">— bar live</span>
@@ -915,5 +971,18 @@ document.getElementById('sortSelect').addEventListener('change',applyFilters);
 initMap();
 loadData();
 </script>
+
+<!-- FAQ per Google Rich Results (nascosta all'utente) -->
+<section aria-hidden="true" style="display:none;">
+  <h2>Domande Frequenti sullo Spritz in Italia</h2>
+  <div><h3>Quanto costa uno Spritz in Italia?</h3><p>Il prezzo medio varia tra 4 e 9 euro a seconda della città.</p></div>
+  <div><h3>Quanto costa uno Spritz a Milano?</h3><p>A Milano tra 7 e 11 euro, con zone come Navigli dove i prezzi variano.</p></div>
+  <div><h3>Quanto costa uno Spritz a Roma?</h3><p>A Roma tra 6 e 9 euro, con variazioni tra centro e periferia.</p></div>
+  <div><h3>Quanto costa uno Spritz a Napoli?</h3><p>A Napoli tra 4 e 6 euro, tra i prezzi più competitivi d'Italia.</p></div>
+  <div><h3>Quanto costa uno Spritz a Venezia?</h3><p>A Venezia da 5 euro nei bacari locali fino a 12 euro vicino a San Marco.</p></div>
+  <div><h3>Quanto costa uno Spritz a Firenze?</h3><p>A Firenze tra 6 e 9 euro, più caro nelle zone turistiche.</p></div>
+  <div><h3>Come funziona SpritzoMetro?</h3><p>SpritzoMetro raccoglie prezzi tramite utenti e li mostra su mappa interattiva.</p></div>
+  <div><h3>Dove bere uno Spritz economico in Italia?</h3><p>Usa i filtri di SpritzoMetro per trovare il bar con lo Spritz più economico nella tua città.</p></div>
+</section>
 </body>
 </html>
