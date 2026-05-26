@@ -11,3 +11,11 @@
   ]
   
 }
+{
+  "routes": [
+    {"src": "/blog", "dest": "/blog.html"},
+    {"src": "/blog/spritz-milano-sotto-5-euro", "dest": "/blog/spritz-milano-sotto-5-euro.html"},
+    {"src": "/blog/guida-spritz-roma", "dest": "/blog/guida-spritz-roma.html"},
+    {"src": "/blog/spritz-venezia-bacari", "dest": "/blog/spritz-venezia-bacari.html"}
+  ]
+}
