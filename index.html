@@ -435,9 +435,8 @@
     <span id="liveCount">— bar live</span>
   </div>
   <div class="header-right">
-    
+    <a href="/blog" style="color:#9a9690;font-size:13px;text-decoration:none;font-weight:500;" onmouseover="this.style.color='#F05A28'" onmouseout="this.style.color='#9a9690'">Blog</a>
     <button class="contribute-btn" onclick="openForm('contribute')">+ Segnala Prezzo</button>
-    <button class="contribute-btn" href="/blog">Blogs</button>
   </div>
 </header>
 
@@ -552,30 +551,24 @@
     <button class="form-close" onclick="closeForm('contribute')">✕</button>
   </div>
   <div class="form-body">
-    <div class="field-row">
-      <div class="field">
-        <label class="field-label">Nome del Bar *</label>
-        <input class="field-input" id="c_name" placeholder="Es. Bar Centrale"/>
-      </div>
-      <div class="field">
-        <label class="field-label">Città *</label>
-        <select class="field-select" id="c_city">
-          <option value="">Seleziona...</option>
-          <option>Milano</option><option>Roma</option><option>Napoli</option>
-          <option>Venezia</option><option>Firenze</option><option>Torino</option>
-          <option>Bologna</option><option>Palermo</option><option>Verona</option><option>Altra</option>
-        </select>
-      </div>
+    <div class="field">
+      <label class="field-label">Cerca il Bar *</label>
+      <div id="c_places_wrap" style="width:100%;position:relative;"></div>
+      <div style="font-size:11px;color:#6a6660;margin-top:5px;">Cerca e seleziona il bar — le coordinate vengono salvate automaticamente</div>
     </div>
-    <div class="field-row">
-      <div class="field">
-        <label class="field-label">Prezzo Aperol Spritz (€) *</label>
-        <input class="field-input" id="c_price" type="number" placeholder="4.50" step="0.5" min="1" max="25"/>
-      </div>
-      <div class="field">
-        <label class="field-label">Indirizzo</label>
-        <input class="field-input" id="c_address" placeholder="Via Roma 12"/>
-      </div>
+    <div id="c_selected_bar" style="display:none;background:rgba(240,90,40,0.1);border:1px solid rgba(240,90,40,0.4);border-radius:5px;padding:10px 12px;margin-bottom:4px;">
+      <div style="font-size:10px;color:#F05A28;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px;">✓ Bar selezionato</div>
+      <div id="c_selected_name" style="font-size:13px;color:white;font-weight:600;"></div>
+      <div id="c_selected_addr" style="font-size:11px;color:#9a9690;margin-top:2px;"></div>
+    </div>
+    <input type="hidden" id="c_name"/>
+    <input type="hidden" id="c_city"/>
+    <input type="hidden" id="c_address"/>
+    <input type="hidden" id="c_lat"/>
+    <input type="hidden" id="c_lng"/>
+    <div class="field">
+      <label class="field-label">Prezzo Aperol Spritz (€) *</label>
+      <input class="field-input" id="c_price" type="number" placeholder="Es. 4.50" step="0.50" min="1" max="25"/>
     </div>
     <div class="field">
       <label class="field-label">Note (opzionale)</label>
@@ -583,13 +576,9 @@
     </div>
     <button class="form-submit" onclick="submitContribute()">Invia Prezzo</button>
     <div class="form-success" id="c_success">✅ Grazie! Il tuo contributo è stato ricevuto.</div>
-
     <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);">
       <div style="font-size:12px;color:#6a6660;margin-bottom:12px;">Sei il proprietario del bar?</div>
-      <button onclick="closeForm('contribute');openForm('claim')"
-        style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:5px;color:#9a9690;font-size:12px;font-family:var(--sans);cursor:pointer;">
-        Richiedi ownership del tuo bar →
-      </button>
+      <button onclick="closeForm('contribute');openForm('claim')" style="width:100%;padding:10px;background:transparent;border:1px solid rgba(255,255,255,0.15);border-radius:5px;color:#9a9690;font-size:12px;font-family:var(--sans);cursor:pointer;">Richiedi ownership del tuo bar →</button>
     </div>
   </div>
 </div>
@@ -857,22 +846,95 @@ function closeForm(type) {
   document.getElementById(type+'Overlay').classList.remove('open');
 }
 
+function initPlacesAutocomplete() {
+  const wrap = document.getElementById('c_places_wrap');
+  if (!wrap) return;
+  const input = document.createElement('input');
+  input.id = 'c_places_input';
+  input.placeholder = 'Es. Bar Basso, Milano...';
+  input.autocomplete = 'off';
+  input.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:9px 12px;font-size:13px;font-family:'DM Sans',sans-serif;color:white;outline:none;';
+  wrap.appendChild(input);
+  const dropdown = document.createElement('div');
+  dropdown.style.cssText = 'display:none;position:absolute;z-index:9999;background:#1C1812;border:1px solid rgba(255,255,255,0.1);border-radius:6px;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.6);width:100%;max-height:240px;overflow-y:auto;';
+  wrap.appendChild(dropdown);
+  const s = document.createElement('style');
+  s.textContent = '#c_places_input:focus{border-color:#F05A28!important}.nom-item{padding:10px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06)}.nom-item:hover{background:rgba(240,90,40,0.15)}.nom-name{font-weight:600;color:white;font-size:13px;margin-bottom:2px}.nom-addr{font-size:11px;color:#6a6660}';
+  document.head.appendChild(s);
+  let timer;
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    const q = input.value.trim();
+    if (q.length < 2) { dropdown.style.display='none'; return; }
+    timer = setTimeout(() => fetchSuggestions(q, dropdown), 400);
+  });
+  input.addEventListener('focus', () => { input.style.borderColor='#F05A28'; });
+  input.addEventListener('blur', () => { input.style.borderColor='rgba(255,255,255,0.1)'; setTimeout(()=>{ dropdown.style.display='none'; }, 200); });
+}
+
+async function fetchSuggestions(query, dropdown) {
+  try {
+    const res = await fetch('/api/geocode?query=' + encodeURIComponent(query));
+    const data = await res.json();
+    dropdown.innerHTML = '';
+    if (!data.results || !data.results.length) { dropdown.style.display='none'; return; }
+    data.results.forEach(r => {
+      const item = document.createElement('div');
+      item.className = 'nom-item';
+      item.innerHTML = '<div class="nom-name">' + r.name + '</div><div class="nom-addr">' + r.address + '</div>';
+      item.addEventListener('mousedown', () => {
+        document.getElementById('c_places_input').value = r.name;
+        document.getElementById('c_name').value = r.name;
+        document.getElementById('c_city').value = r.city;
+        document.getElementById('c_address').value = r.address;
+        document.getElementById('c_lat').value = r.lat;
+        document.getElementById('c_lng').value = r.lng;
+        document.getElementById('c_selected_name').textContent = r.name;
+        document.getElementById('c_selected_addr').textContent = r.address;
+        document.getElementById('c_selected_bar').style.display = 'block';
+        dropdown.style.display = 'none';
+      });
+      dropdown.appendChild(item);
+    });
+    dropdown.style.display = 'block';
+  } catch(e) { dropdown.style.display='none'; }
+}
+
 async function submitContribute() {
-  const name=document.getElementById('c_name').value.trim();
-  const city=document.getElementById('c_city').value;
-  const price=parseFloat(document.getElementById('c_price').value);
-  const addr=document.getElementById('c_address').value.trim();
-  if(!name||!city||!price){alert('Compila i campi obbligatori (*)');return}
+  const name = document.getElementById('c_name').value.trim();
+  const city = document.getElementById('c_city').value.trim();
+  const price = parseFloat(document.getElementById('c_price').value);
+  const addr = document.getElementById('c_address').value.trim();
+  const lat = parseFloat(document.getElementById('c_lat').value);
+  const lng = parseFloat(document.getElementById('c_lng').value);
+  if(!name){alert('Cerca e seleziona un bar dalla lista');return}
+  if(!price){alert('Inserisci il prezzo dello spritz');return}
   let barId;
-  const existing=allBars.find(b=>b.name.toLowerCase()===name.toLowerCase()&&b.city===city);
-  if(existing){barId=existing.id}
-  else{
-    const{data,error}=await db.from('bars').insert({name,city,address:addr,source:'user_submit'}).select().single();
-    if(error){alert('Errore. Riprova.');return}
-    barId=data.id; allBars.push({...data,latestPrice:null,prices:[]});
+  const existing = allBars.find(b=>b.name.toLowerCase()===name.toLowerCase()&&(b.city||'').toLowerCase()===(city||'').toLowerCase());
+  if(existing){
+    barId = existing.id;
+  } else {
+    const{data,error}=await db.from('bars').insert({name,city,address:addr,source:'user_submit',latitude:isNaN(lat)?null:lat,longitude:isNaN(lng)?null:lng}).select().single();
+    if(error){alert('Errore nel salvataggio. Riprova.');return}
+    barId = data.id;
+    const newBar = {...data, latestPrice:price, calledAt:new Date().toISOString(), source:'user_submit', isNew:true, prices:[]};
+    allBars.push(newBar);
+    buildCityFilters(); updateStats(); applyFilters();
+    if(!isNaN(lat)&&!isNaN(lng)){
+      const m = L.marker([lat,lng],{icon:makeMarker(price)});
+      const mapsUrl = 'https://www.google.com/maps/search/' + encodeURIComponent(name+' '+addr);
+      m.bindPopup('<div class="popup-inner"><div class="popup-name">'+name+'</div><div class="popup-price">€'+price.toFixed(2)+'</div>'+(addr?'<div class="popup-addr">'+addr+'</div>':'')+'<a class="popup-maps" href="'+mapsUrl+'" target="_blank">Apri in Maps →</a></div>',{maxWidth:240});
+      m.addTo(map); markers[barId]=m;
+      map.flyTo([lat,lng],15,{duration:1}); m.openPopup();
+    }
   }
   const{error}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
-  if(error){alert('Errore nel salvataggio.');return}
+  if(error){alert('Errore nel salvataggio del prezzo.');return}
+  if(existing){const bar=allBars.find(b=>b.id===barId);if(bar){bar.latestPrice=price;bar.calledAt=new Date().toISOString();updateStats();updateTicker();applyFilters();}}
+  const inp=document.getElementById('c_places_input'); if(inp) inp.value='';
+  document.getElementById('c_selected_bar').style.display='none';
+  ['c_name','c_city','c_address','c_lat','c_lng'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('c_price').value='';
   document.getElementById('c_success').style.display='block';
   setTimeout(()=>{closeForm('contribute');document.getElementById('c_success').style.display='none'},2500);
 }
@@ -891,6 +953,7 @@ document.getElementById('searchInput').addEventListener('input',applyFilters);
 document.getElementById('sortSelect').addEventListener('change',applyFilters);
 initMap();
 loadData();
+initPlacesAutocomplete();
 </script>
 
 <!-- BLOG SECTION -->
@@ -900,7 +963,7 @@ loadData();
     <h2 style="font-family:var(--serif);font-size:38px;font-weight:600;color:#FAFAF7;margin-bottom:8px;">Guide allo Spritz in Italia</h2>
     <p style="color:#6a6660;font-size:14px;margin-bottom:32px;">Prezzi, quartieri e consigli per bere bene in ogni città</p>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-bottom:28px;">
-      <a href="/blog/spritz-milano-sotto-5-euro" style="background:#242118;border:1px solid #2e2b24;border-radius:10px;overflow:hidden;text-decoration:none;display:block;transition:border-color .15s;" onmouseover="this.style.borderColor='#F05A28'" onmouseout="this.style.borderColor='#2e2b24'">
+      <a href="/blog/spritz-milano-sotto-5-euro" style="background:#242118;border:1px solid #2e2b24;border-radius:10px;overflow:hidden;text-decoration:none;display:block;" onmouseover="this.style.borderColor='#F05A28'" onmouseout="this.style.borderColor='#2e2b24'">
         <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&auto=format&fit=crop" alt="Spritz Milano" style="width:100%;height:140px;object-fit:cover;" loading="lazy"/>
         <div style="padding:16px;">
           <div style="font-size:10px;color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Milano</div>
@@ -908,7 +971,7 @@ loadData();
           <div style="font-size:11px;color:#6a6660;">I bar più economici per quartiere →</div>
         </div>
       </a>
-      <a href="/blog/guida-spritz-roma" style="background:#242118;border:1px solid #2e2b24;border-radius:10px;overflow:hidden;text-decoration:none;display:block;transition:border-color .15s;" onmouseover="this.style.borderColor='#F05A28'" onmouseout="this.style.borderColor='#2e2b24'">
+      <a href="/blog/guida-spritz-roma" style="background:#242118;border:1px solid #2e2b24;border-radius:10px;overflow:hidden;text-decoration:none;display:block;" onmouseover="this.style.borderColor='#F05A28'" onmouseout="this.style.borderColor='#2e2b24'">
         <img src="https://images.unsplash.com/photo-1529260830199-42c24126f198?w=400&auto=format&fit=crop" alt="Spritz Roma" style="width:100%;height:140px;object-fit:cover;" loading="lazy"/>
         <div style="padding:16px;">
           <div style="font-size:10px;color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Roma</div>
@@ -916,7 +979,7 @@ loadData();
           <div style="font-size:11px;color:#6a6660;">Dal Pigneto a Campo de Fiori →</div>
         </div>
       </a>
-      <a href="/blog/spritz-venezia-bacari" style="background:#242118;border:1px solid #2e2b24;border-radius:10px;overflow:hidden;text-decoration:none;display:block;transition:border-color .15s;" onmouseover="this.style.borderColor='#F05A28'" onmouseout="this.style.borderColor='#2e2b24'">
+      <a href="/blog/spritz-venezia-bacari" style="background:#242118;border:1px solid #2e2b24;border-radius:10px;overflow:hidden;text-decoration:none;display:block;" onmouseover="this.style.borderColor='#F05A28'" onmouseout="this.style.borderColor='#2e2b24'">
         <img src="https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=400&auto=format&fit=crop" alt="Venezia" style="width:100%;height:140px;object-fit:cover;" loading="lazy"/>
         <div style="padding:16px;">
           <div style="font-size:10px;color:var(--orange);font-weight:700;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Venezia</div>
@@ -925,9 +988,18 @@ loadData();
         </div>
       </a>
     </div>
-    <a href="/blog" style="display:inline-block;border:1px solid #3d3930;color:#9a9690;padding:10px 24px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;transition:all .15s;" onmouseover="this.style.borderColor='#F05A28';this.style.color='#F05A28'" onmouseout="this.style.borderColor='#3d3930';this.style.color='#9a9690'">Vedi tutti gli articoli →</a>
+    <a href="/blog" style="display:inline-block;border:1px solid #3d3930;color:#9a9690;padding:10px 24px;border-radius:6px;text-decoration:none;font-size:13px;font-weight:500;" onmouseover="this.style.borderColor='#F05A28';this.style.color='#F05A28'" onmouseout="this.style.borderColor='#3d3930';this.style.color='#9a9690'">Vedi tutti gli articoli →</a>
   </div>
 </div>
 
+<!-- FAQ per Google -->
+<section aria-hidden="true" style="display:none;">
+  <h2>Domande Frequenti sullo Spritz in Italia</h2>
+  <div><h3>Quanto costa uno Spritz in Italia?</h3><p>Il prezzo medio varia tra 4 e 9 euro a seconda della città.</p></div>
+  <div><h3>Quanto costa uno Spritz a Milano?</h3><p>A Milano tra 7 e 11 euro.</p></div>
+  <div><h3>Quanto costa uno Spritz a Roma?</h3><p>A Roma tra 6 e 9 euro.</p></div>
+  <div><h3>Quanto costa uno Spritz a Napoli?</h3><p>A Napoli tra 4 e 6 euro.</p></div>
+  <div><h3>Come funziona SpritzoMetro?</h3><p>SpritzoMetro raccoglie i prezzi tramite utenti e li mostra su mappa.</p></div>
+</section>
 </body>
 </html>
