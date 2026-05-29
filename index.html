@@ -2,7 +2,7 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>SpritzoMetro — Prezzi dello Spritz in Italia</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
@@ -21,7 +21,7 @@
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; font-family: var(--sans); background: var(--bg); color: var(--text); overflow: hidden; }
+    html, body { height: 100%; font-family: var(--sans); background: var(--bg); color: var(--text); }
 
     /* ── HEADER ── */
     header {
@@ -155,6 +155,7 @@
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      height: 100%;
     }
 
     /* ── FILTERS ── */
@@ -164,6 +165,7 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
+      flex-shrink: 0;
     }
 
     .search-wrap { position: relative; }
@@ -187,7 +189,19 @@
       font-size: 12px; color: var(--muted);
     }
 
-    .chip-row { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+    .chip-row { 
+      display: flex; 
+      gap: 5px; 
+      flex-wrap: nowrap; 
+      align-items: center; 
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+      padding-bottom: 2px;
+    }
+
+    .chip-row::-webkit-scrollbar { height: 3px; }
+    .chip-row::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
     .chip {
       padding: 4px 10px;
@@ -196,6 +210,7 @@
       font-size: 11px; font-weight: 500; font-family: var(--sans);
       color: var(--muted); background: transparent;
       cursor: pointer; transition: all .15s; white-space: nowrap;
+      flex-shrink: 0;
     }
 
     .chip:hover { border-color: var(--orange); color: var(--orange); }
@@ -206,10 +221,27 @@
       border: 1px solid var(--border); border-radius: 5px;
       padding: 4px 8px; font-size: 11px; font-family: var(--sans);
       color: var(--muted); background: transparent; outline: none; cursor: pointer;
+      flex-shrink: 0;
     }
 
+    /* City filters row - scrollable */
+    #cityFilters {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+      padding-bottom: 2px;
+    }
+
+    #cityFilters::-webkit-scrollbar { height: 3px; }
+    #cityFilters::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
     /* ── BAR LIST ── */
-    .bar-list { flex: 1; overflow-y: auto; }
+    .bar-list { 
+      flex: 1; 
+      overflow-y: auto; 
+      min-height: 0;
+    }
     .bar-list::-webkit-scrollbar { width: 3px; }
     .bar-list::-webkit-scrollbar-thumb { background: var(--border); }
 
@@ -272,7 +304,15 @@
     .promo-card span { font-size: 11px; color: var(--orange); font-weight: 600; }
 
     /* ── MAP ── */
-    #map { flex: 1; height: 100%; }
+    .map-container {
+      flex: 1;
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    #map { height: 100%; width: 100%; }
 
     .leaflet-popup-content-wrapper {
       border-radius: 8px;
@@ -301,8 +341,18 @@
     /* City shortcuts top-right of map */
     .city-shortcuts {
       position: absolute; top: 12px; right: 12px; z-index: 500;
-      display: flex; flex-direction: column; gap: 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      max-height: calc(100% - 100px);
+      overflow-y: auto;
+      scrollbar-width: thin;
+      scrollbar-color: rgba(255,255,255,0.2) transparent;
+      padding-right: 4px;
     }
+
+    .city-shortcuts::-webkit-scrollbar { width: 3px; }
+    .city-shortcuts::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.2); border-radius: 3px; }
 
     .city-short {
       background: rgba(28,24,18,0.88);
@@ -312,6 +362,7 @@
       font-family: var(--sans); cursor: pointer;
       transition: background .15s; white-space: nowrap;
       text-align: left;
+      flex-shrink: 0;
     }
 
     .city-short:hover { background: var(--orange); }
@@ -410,18 +461,134 @@
     .top-loader.active { display: block; }
     @keyframes load { 0%{transform:scaleX(0)}70%{transform:scaleX(.8)}100%{transform:scaleX(1);opacity:0} }
 
-    /* ── MOBILE ── */
+    /* ── MOBILE (max-width: 768px) ── */
     @media (max-width: 768px) {
-      .layout { flex-direction: column; padding-top: 80px; }
-      .layout.stats-visible { padding-top: 80px; }
+      header { padding: 0 12px; gap: 8px; }
+      .logo { font-size: 18px; }
+      .contribute-btn { padding: 6px 10px; font-size: 11px; }
+      .header-right { gap: 6px; }
+
       .hero-stats { display: none; }
-      #map { height: 40vh; width: 100%; flex-shrink: 0; }
-      .sidebar { width: 100%; min-width: unset; height: 60vh; border-right: none; border-top: 1px solid var(--border); }
-      .city-shortcuts { display: none; }
-      .form-panel { width: 100%; right: -100%; }
+
+      .layout { 
+        flex-direction: column; 
+        padding-top: 80px;
+        height: 100vh;
+        overflow: hidden;
+      }
+      .layout.stats-visible { padding-top: 80px; }
+
+      .sidebar { 
+        width: 100%; 
+        min-width: unset; 
+        height: 55vh; 
+        border-right: none; 
+        border-top: 1px solid var(--border);
+        order: 2;
+      }
+
+      .filters {
+        padding: 8px 12px;
+        gap: 6px;
+      }
+
+      .search-input {
+        padding: 7px 10px 7px 30px;
+        font-size: 14px;
+      }
+
+      .chip {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+
+      .sort-select {
+        padding: 5px 8px;
+        font-size: 12px;
+      }
+
+      .bar-item {
+        padding: 11px 14px;
+      }
+
+      .bar-name {
+        font-size: 15px;
+      }
+
+      .bar-price {
+        font-size: 24px;
+      }
+
+      .map-container {
+        height: 45vh;
+        width: 100%;
+        order: 1;
+        flex: none;
+      }
+
+      #map { height: 100%; }
+
+      .city-shortcuts {
+        top: 8px;
+        right: 8px;
+        gap: 4px;
+        max-height: calc(100% - 80px);
+      }
+
+      .city-short {
+        padding: 6px 10px;
+        font-size: 12px;
+      }
+
+      .map-legend {
+        bottom: 12px;
+        left: 8px;
+        padding: 8px 10px;
+      }
+
+      .legend-row {
+        font-size: 10px;
+      }
+
+      .lcirc {
+        width: 16px;
+        height: 16px;
+        font-size: 7px;
+      }
+
+      .form-panel { 
+        width: 100%; 
+        right: -100%; 
+      }
       .form-panel.open { right: 0; }
     }
+
+    /* ── SMALL MOBILE (max-width: 380px) ── */
+    @media (max-width: 380px) {
+      .logo { font-size: 16px; }
+      .contribute-btn { padding: 5px 8px; font-size: 10px; }
+
+      .hstat-val { font-size: 28px; }
+      .hstat { padding: 10px 12px; }
+
+      .sidebar { height: 52vh; }
+      .map-container { height: 48vh; }
+
+      .bar-name { font-size: 14px; }
+      .bar-price { font-size: 22px; min-width: 60px; }
+    }
+
+    /* ── TABLET (769px - 1024px) ── */
+    @media (min-width: 769px) and (max-width: 1024px) {
+      .sidebar {
+        width: 320px;
+        min-width: 320px;
+      }
+
+      .hstat-val { font-size: 32px; }
+    }
   </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -511,8 +678,8 @@
   </div>
 
   <!-- MAP -->
-  <div style="flex:1;position:relative;height:100%;overflow:hidden;">
-    <div id="map" style="height:100%;width:100%;"></div>
+  <div class="map-container">
+    <div id="map"></div>
 
     <!-- City shortcuts -->
     <div class="city-shortcuts">
