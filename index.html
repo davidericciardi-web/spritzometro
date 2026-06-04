@@ -790,375 +790,439 @@
 </div>
 
 <script>
-const SUPABASE_URL      = 'https://wkaeyssmfwkefxjhsgav.supabase.co';
+// Replace the entire script section from line starting with "const SUPABASE_URL" to the end
+
+const SUPABASE_URL = 'https://wkaeyssmfwkefxjhsgav.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrYWV5c3NtZndrZWZ4amhzZ2F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNjUxMzAsImV4cCI6MjA5MTY0MTEzMH0.lgq4S5Oexr5aNn2Zswo-8uqH--vFSiJmDNkAbHsFmlY';
 const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-let allBars=[], filteredBars=[], markers={}, map;
-let activeCity='all', activeFilter='all', activeBarId=null;
+let allBars = [], filteredBars = [], markers = {}, map;
+let activeCity = 'all', activeFilter = 'all', activeBarId = null;
 
 // ── MAP ──
 function initMap() {
-  map = L.map('map', {center:[42,12.5], zoom:6, zoomControl:false, attributionControl:false});
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:19}).addTo(map);
-  L.control.zoom({position:'bottomright'}).addTo(map);
-  setTimeout(()=>map.invalidateSize(), 200);
-  setTimeout(()=>map.invalidateSize(), 700);
-  setTimeout(()=>map.invalidateSize(), 1400);
-  window.addEventListener('resize', ()=>map.invalidateSize());
+    map = L.map('map', { center: [42, 12.5], zoom: 6, zoomControl: false, attributionControl: false });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+    L.control.zoom({ position: 'bottomright' }).addTo(map);
+    setTimeout(() => map.invalidateSize(), 200);
+    setTimeout(() => map.invalidateSize(), 700);
+    setTimeout(() => map.invalidateSize(), 1400);
+    window.addEventListener('resize', () => map.invalidateSize());
 }
 
 function flyTo(lat, lng, zoom) {
-  map.flyTo([lat, lng], zoom, {duration: 1.2});
+    map.flyTo([lat, lng], zoom, { duration: 1.2 });
 }
 
 function makeMarker(price) {
-  const hasPrice = price !== null && price !== undefined;
-  const bg = hasPrice ? '#1C1812' : '#F05A28';
-  const label = hasPrice ? `€${price.toFixed(1)}` : '?';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+    const hasPrice = price !== null && price !== undefined;
+    const bg = hasPrice ? '#1C1812' : '#F05A28';
+    const label = hasPrice ? `€${price.toFixed(1)}` : '?';
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
     <circle cx="24" cy="24" r="22" fill="${bg}" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
     <text x="24" y="25" text-anchor="middle" dominant-baseline="middle" fill="white"
-      font-family="Cormorant Garamond,serif" font-weight="600" font-size="${hasPrice?'12':'14'}">${label}</text>
+      font-family="Cormorant Garamond,serif" font-weight="600" font-size="${hasPrice ? '12' : '14'}">${label}</text>
   </svg>`;
-  return L.divIcon({html:svg, className:'', iconSize:[48,48], iconAnchor:[24,24], popupAnchor:[0,-26]});
+    return L.divIcon({ html: svg, className: '', iconSize: [48, 48], iconAnchor: [24, 24], popupAnchor: [0, -26] });
 }
 
-// ── LOAD DATA ──
+// FIXED: Load data with proper joining
 async function loadData() {
-  document.getElementById('loader').classList.add('active');
-  try {
-    // DEBUG: pehle check karo ke prices table se data aa raha hai ya nahi
-    const {data: allPrices, error: pricesErr} = await db.from('prices').select('*');
-    console.log('=== DEBUG: All prices from DB ===', allPrices);
-    console.log('=== DEBUG: Prices error ===', pricesErr);
-
-    // Ab bars fetch karo with prices relation
-    const {data: bars, error} = await db.from('bars').select('*, prices(price, called_at, source)').order('name');
-
-    console.log('=== DEBUG: Bars from DB ===', bars);
-    console.log('=== DEBUG: Bars error ===', error);
-
-    if (error) throw error;
-
-    // Fallback: agar prices relation empty hai tu separately prices se merge karo
-    const pricesByBar = {};
-    if (allPrices && allPrices.length > 0) {
-      allPrices.forEach(p => {
-        if (!pricesByBar[p.bar_id]) pricesByBar[p.bar_id] = [];
-        pricesByBar[p.bar_id].push(p);
-      });
+    document.getElementById('loader').classList.add('active');
+    try {
+        // First fetch all bars
+        const { data: bars, error: barsError } = await db.from('bars').select('*').order('name');
+        console.log('Bars fetched:', bars);
+        
+        if (barsError) throw barsError;
+        
+        // Then fetch all prices separately
+        const { data: allPrices, error: pricesError } = await db.from('prices').select('*');
+        console.log('Prices fetched:', allPrices);
+        
+        if (pricesError) throw pricesError;
+        
+        // Group prices by bar_id
+        const pricesByBar = {};
+        if (allPrices && allPrices.length > 0) {
+            allPrices.forEach(p => {
+                if (!pricesByBar[p.bar_id]) {
+                    pricesByBar[p.bar_id] = [];
+                }
+                pricesByBar[p.bar_id].push(p);
+            });
+        }
+        
+        // Merge bars with their prices
+        allBars = bars.map(bar => {
+            const barPrices = pricesByBar[bar.id] || [];
+            const sortedPrices = barPrices.sort((a, b) => new Date(b.called_at) - new Date(a.called_at));
+            const latest = sortedPrices[0];
+            const isNew = latest?.called_at && (Date.now() - new Date(latest.called_at).getTime()) < 7 * 24 * 3600 * 1000;
+            
+            return {
+                ...bar,
+                prices: barPrices,
+                latestPrice: latest?.price ?? null,
+                calledAt: latest?.called_at ?? null,
+                source: latest?.source ?? bar.source ?? null,
+                isNew: isNew
+            };
+        });
+        
+        console.log('Processed bars with prices:', allBars);
+        console.log('Bars with prices:', allBars.filter(b => b.latestPrice !== null).length);
+        
+        buildCityFilters();
+        updateStats();
+        updateTicker();
+        applyFilters();
+        setupRealtime();
+        
+    } catch (err) {
+        console.error('Load error:', err);
+        document.getElementById('barList').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento: ${err.message}</div>`;
+    } finally {
+        document.getElementById('loader').classList.remove('active');
     }
-
-    allBars = bars.map(bar => {
-      // Pehle try karo relation se
-      let prices = Array.isArray(bar.prices) ? bar.prices : [];
-
-      // Agar relation empty hai tu fallback se lo
-      if (prices.length === 0 && pricesByBar[bar.id]) {
-        prices = pricesByBar[bar.id];
-      }
-
-      const sortedPrices = prices.sort((a,b) => new Date(b.called_at) - new Date(a.called_at));
-      const latest = sortedPrices[0];
-      const isNew = latest?.called_at && (Date.now() - new Date(latest.called_at).getTime()) < 7*24*3600*1000;
-
-      return {
-        ...bar,
-        prices: prices,
-        latestPrice: latest?.price ?? null,
-        calledAt: latest?.called_at ?? null,
-        source: latest?.source ?? bar.source ?? null,
-        isNew
-      };
-    });
-
-    console.log('=== DEBUG: Processed allBars ===', allBars);
-    console.log('=== DEBUG: Bars with prices ===', allBars.filter(b => b.latestPrice !== null).length);
-    console.log('=== DEBUG: Bars without prices ===', allBars.filter(b => b.latestPrice === null).length);
-
-    buildCityFilters();
-    updateStats();
-    updateTicker();
-    applyFilters();
-    setupRealtime();
-  } catch(err) {
-    console.error('=== DEBUG: Load error ===', err);
-    document.getElementById('barList').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento: ${err.message}</div>`;
-  } finally {
-    document.getElementById('loader').classList.remove('active');
-  }
 }
 
 function buildCityFilters() {
-  const cities = [...new Set(allBars.map(b=>b.city).filter(Boolean))].sort();
-  const wrap = document.getElementById('cityFilters');
-  wrap.innerHTML = `<button class="chip active" data-city="all" onclick="setCity('all')">Italia</button>`;
-  cities.forEach(c => {
-    const btn = document.createElement('button');
-    btn.className='chip'; btn.dataset.city=c; btn.textContent=c;
-    btn.onclick=()=>setCity(c); wrap.appendChild(btn);
-  });
-  document.getElementById('liveCount').textContent = `${allBars.length} bar live`;
+    const cities = [...new Set(allBars.map(b => b.city).filter(Boolean))].sort();
+    const wrap = document.getElementById('cityFilters');
+    wrap.innerHTML = `<button class="chip active" data-city="all" onclick="setCity('all')">Italia</button>`;
+    cities.forEach(c => {
+        const btn = document.createElement('button');
+        btn.className = 'chip';
+        btn.dataset.city = c;
+        btn.textContent = c;
+        btn.onclick = () => setCity(c);
+        wrap.appendChild(btn);
+    });
+    document.getElementById('liveCount').textContent = `${allBars.length} bar live`;
 }
 
 function updateStats() {
-  const wp = allBars.filter(b=>b.latestPrice);
-  document.getElementById('totalBars').textContent = allBars.length;
-  if (wp.length) {
-    const prices = wp.map(b=>b.latestPrice);
-    const avg = prices.reduce((s,p)=>s+p,0)/prices.length;
-    document.getElementById('avgPrice').textContent = `€${avg.toFixed(2)}`;
-    document.getElementById('minPrice').textContent = `€${Math.min(...prices).toFixed(2)}`;
-    document.getElementById('maxPrice').textContent = `€${Math.max(...prices).toFixed(2)}`;
-  }
+    const wp = allBars.filter(b => b.latestPrice);
+    document.getElementById('totalBars').textContent = allBars.length;
+    if (wp.length) {
+        const prices = wp.map(b => b.latestPrice);
+        const avg = prices.reduce((s, p) => s + p, 0) / prices.length;
+        document.getElementById('avgPrice').textContent = `€${avg.toFixed(2)}`;
+        document.getElementById('minPrice').textContent = `€${Math.min(...prices).toFixed(2)}`;
+        document.getElementById('maxPrice').textContent = `€${Math.max(...prices).toFixed(2)}`;
+    }
 }
 
 function updateTicker() {
-  const cityAvgs = {};
-  allBars.filter(b=>b.latestPrice&&b.city).forEach(b=>{
-    if(!cityAvgs[b.city]) cityAvgs[b.city]=[];
-    cityAvgs[b.city].push(b.latestPrice);
-  });
-  const items = Object.entries(cityAvgs).map(([city,prices])=>{
-    const avg = prices.reduce((s,p)=>s+p,0)/prices.length;
-    return `${city} media €${avg.toFixed(2)}`;
-  });
-  items.push(`${allBars.length} bar monitorati`);
-  items.push('Aggiornato ogni settimana');
-  const doubled = [...items, ...items];
-  document.getElementById('tickerTrack').innerHTML = doubled.map(t=>`<span>${t}</span>`).join('');
+    const cityAvgs = {};
+    allBars.filter(b => b.latestPrice && b.city).forEach(b => {
+        if (!cityAvgs[b.city]) cityAvgs[b.city] = [];
+        cityAvgs[b.city].push(b.latestPrice);
+    });
+    const items = Object.entries(cityAvgs).map(([city, prices]) => {
+        const avg = prices.reduce((s, p) => s + p, 0) / prices.length;
+        return `${city} media €${avg.toFixed(2)}`;
+    });
+    items.push(`${allBars.length} bar monitorati`);
+    items.push('Aggiornato ogni settimana');
+    const doubled = [...items, ...items];
+    document.getElementById('tickerTrack').innerHTML = doubled.map(t => `<span>${t}</span>`).join('');
 }
 
 function setCity(city) {
-  activeCity=city;
-  document.querySelectorAll('[data-city]').forEach(b=>b.classList.toggle('active',b.dataset.city===city));
-  applyFilters();
+    activeCity = city;
+    document.querySelectorAll('[data-city]').forEach(b => b.classList.toggle('active', b.dataset.city === city));
+    applyFilters();
 }
 
 function setFilter(filter) {
-  activeFilter=filter;
-  document.querySelectorAll('[data-filter]').forEach(b=>b.classList.toggle('active',b.dataset.filter===filter));
-  applyFilters();
+    activeFilter = filter;
+    document.querySelectorAll('[data-filter]').forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+    applyFilters();
 }
 
 function applyFilters() {
-  const search = document.getElementById('searchInput').value.toLowerCase();
-  const sort = document.getElementById('sortSelect').value;
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const sort = document.getElementById('sortSelect').value;
 
-  filteredBars = allBars.filter(b => {
-    const mc = activeCity==='all' || b.city===activeCity;
-    const ms = !search || b.name.toLowerCase().includes(search) || (b.city||'').toLowerCase().includes(search) || (b.address||'').toLowerCase().includes(search);
-    let mf = true;
-    if (activeFilter==='under4') mf = b.latestPrice && b.latestPrice < 4;
-    else if (activeFilter==='mid') mf = b.latestPrice && b.latestPrice >= 4 && b.latestPrice <= 7;
-    else if (activeFilter==='over7') mf = b.latestPrice && b.latestPrice > 7;
-    else if (activeFilter==='ai') mf = b.source === 'ai_call';
-    return mc && ms && mf;
-  });
+    filteredBars = allBars.filter(b => {
+        const mc = activeCity === 'all' || b.city === activeCity;
+        const ms = !search || b.name.toLowerCase().includes(search) || (b.city || '').toLowerCase().includes(search) || (b.address || '').toLowerCase().includes(search);
+        let mf = true;
+        if (activeFilter === 'under4') mf = b.latestPrice && b.latestPrice < 4;
+        else if (activeFilter === 'mid') mf = b.latestPrice && b.latestPrice >= 4 && b.latestPrice <= 7;
+        else if (activeFilter === 'over7') mf = b.latestPrice && b.latestPrice > 7;
+        else if (activeFilter === 'ai') mf = b.source === 'ai_call';
+        return mc && ms && mf;
+    });
 
-  filteredBars.sort((a,b) => {
-    if(sort==='price_asc') return (a.latestPrice||99)-(b.latestPrice||99);
-    if(sort==='price_desc') return (b.latestPrice||0)-(a.latestPrice||0);
-    if(sort==='name_asc') return a.name.localeCompare(b.name);
-    if(sort==='recent') return new Date(b.calledAt||0)-new Date(a.calledAt||0);
-    return 0;
-  });
+    filteredBars.sort((a, b) => {
+        if (sort === 'price_asc') return (a.latestPrice || 99) - (b.latestPrice || 99);
+        if (sort === 'price_desc') return (b.latestPrice || 0) - (a.latestPrice || 0);
+        if (sort === 'name_asc') return a.name.localeCompare(b.name);
+        if (sort === 'recent') return new Date(b.calledAt || 0) - new Date(a.calledAt || 0);
+        return 0;
+    });
 
-  renderList();
-  renderMarkers();
+    renderList();
+    renderMarkers();
 }
 
 function renderList() {
-  const list = document.getElementById('barList');
-  if (!filteredBars.length) {
-    list.innerHTML=`<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Nessun bar trovato.</div>`;
-    return;
-  }
+    const list = document.getElementById('barList');
+    if (!filteredBars.length) {
+        list.innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Nessun bar trovato.</div>`;
+        return;
+    }
 
-  let html = '';
-  filteredBars.forEach((bar,i) => {
-    const price = bar.latestPrice ? `€${bar.latestPrice.toFixed(2)}` : '—';
-    const date = bar.calledAt ? new Date(bar.calledAt).toLocaleDateString('it-IT') : '';
-    const srcTag = bar.source==='ai_call' ? `<span class="tag ai">AI</span>` : bar.source==='user_submit' ? `<span class="tag user">Utente</span>` : '';
-    const newTag = bar.isNew ? `<span class="tag new">Nuovo</span>` : '';
+    let html = '';
+    filteredBars.forEach((bar, i) => {
+        const price = bar.latestPrice ? `€${bar.latestPrice.toFixed(2)}` : '—';
+        const date = bar.calledAt ? new Date(bar.calledAt).toLocaleDateString('it-IT') : '';
+        const srcTag = bar.source === 'ai_call' ? `<span class="tag ai">AI</span>` : bar.source === 'user_submit' ? `<span class="tag user">Utente</span>` : '';
+        const newTag = bar.isNew ? `<span class="tag new">Nuovo</span>` : '';
 
-    html += `<div class="bar-item ${bar.id===activeBarId?'active':''}" onclick="selectBar('${bar.id}')" data-id="${bar.id}">
-      <div class="bar-rank">${i+1}</div>
+        html += `<div class="bar-item ${bar.id === activeBarId ? 'active' : ''}" onclick="selectBar('${bar.id}')" data-id="${bar.id}">
+      <div class="bar-rank">${i + 1}</div>
       <div class="bar-info">
         <div class="bar-name">${bar.name}</div>
-        <div class="bar-sub">${bar.city||''}${date?' · '+date:''} ${srcTag}${newTag}</div>
+        <div class="bar-sub">${bar.city || ''}${date ? ' · ' + date : ''} ${srcTag}${newTag}</div>
       </div>
-      <div class="bar-price ${!bar.latestPrice?'none':''}">${price}</div>
+      <div class="bar-price ${!bar.latestPrice ? 'none' : ''}">${price}</div>
     </div>`;
 
-    if ((i+1) % 8 === 0 && i < filteredBars.length-1) {
-      html += `<div class="promo-card" onclick="openForm('contribute')">
+        if ((i + 1) % 8 === 0 && i < filteredBars.length - 1) {
+            html += `<div class="promo-card" onclick="openForm('contribute')">
         <p>Il tuo bar non è nell'indice?</p>
         <span>Aggiungilo gratis →</span>
       </div>`;
-    }
-  });
+        }
+    });
 
-  list.innerHTML = html;
+    list.innerHTML = html;
 }
 
 function renderMarkers() {
-  Object.values(markers).forEach(m=>map.removeLayer(m));
-  markers={};
-  filteredBars.forEach(bar=>{
-    if(!bar.latitude||!bar.longitude) return;
-    const m = L.marker([bar.latitude,bar.longitude], {icon:makeMarker(bar.latestPrice)});
-    const addr = bar.address || '';
-    const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(bar.name+' '+addr)}`;
-    m.bindPopup(`<div class="popup-inner">
+    Object.values(markers).forEach(m => map.removeLayer(m));
+    markers = {};
+    filteredBars.forEach(bar => {
+        if (!bar.latitude || !bar.longitude) return;
+        const m = L.marker([bar.latitude, bar.longitude], { icon: makeMarker(bar.latestPrice) });
+        const addr = bar.address || '';
+        const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(bar.name + ' ' + addr)}`;
+        m.bindPopup(`<div class="popup-inner">
       <div class="popup-name">${bar.name}</div>
       ${bar.latestPrice
-        ? `<div class="popup-price">€${bar.latestPrice.toFixed(2)}</div>`
-        : `<div class="popup-price none">Prezzo non disponibile</div>`}
+                ? `<div class="popup-price">€${bar.latestPrice.toFixed(2)}</div>`
+                : `<div class="popup-price none">Prezzo non disponibile</div>`}
       ${addr ? `<div class="popup-addr">${addr}</div>` : ''}
       <a class="popup-maps" href="${mapsUrl}" target="_blank">Apri in Maps →</a>
-    </div>`, {maxWidth:240});
-    m.on('click', ()=>selectBar(bar.id, false));
-    m.addTo(map); markers[bar.id]=m;
-  });
+    </div>`, { maxWidth: 240 });
+        m.on('click', () => selectBar(bar.id, false));
+        m.addTo(map);
+        markers[bar.id] = m;
+    });
 }
 
-function selectBar(id, flyTo=true) {
-  activeBarId=id;
-  const bar=allBars.find(b=>b.id===id); if(!bar) return;
-  document.querySelectorAll('.bar-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
-  const el=document.querySelector(`.bar-item[data-id="${id}"]`);
-  if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
-  if(flyTo&&bar.latitude&&bar.longitude) map.flyTo([bar.latitude,bar.longitude],15,{duration:1});
-  if(markers[id]) markers[id].openPopup();
+function selectBar(id, flyToMap = true) {
+    activeBarId = id;
+    const bar = allBars.find(b => b.id === id);
+    if (!bar) return;
+    document.querySelectorAll('.bar-item').forEach(el => el.classList.toggle('active', el.dataset.id === id));
+    const el = document.querySelector(`.bar-item[data-id="${id}"]`);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    if (flyToMap && bar.latitude && bar.longitude) map.flyTo([bar.latitude, bar.longitude], 15, { duration: 1 });
+    if (markers[id]) markers[id].openPopup();
 }
 
 function setupRealtime() {
-  db.channel('live')
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prices'},payload=>{
-      const bar=allBars.find(b=>b.id===payload.new.bar_id);
-      if(bar){bar.latestPrice=payload.new.price;bar.calledAt=payload.new.called_at;bar.source=payload.new.source;updateStats();updateTicker();applyFilters();}
-    })
-    .subscribe();
+    db.channel('live')
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'prices' }, async (payload) => {
+            console.log('New price added:', payload);
+            // Reload entire data to be safe
+            await loadData();
+        })
+        .subscribe();
 }
 
-// ── FORMS ──
+// ── FIXED FORM SUBMISSION ──
+async function submitContribute() {
+    const name = document.getElementById('c_name').value.trim();
+    const city = document.getElementById('c_city').value.trim();
+    const price = parseFloat(document.getElementById('c_price').value);
+    const addr = document.getElementById('c_address').value.trim();
+    const lat = parseFloat(document.getElementById('c_lat').value);
+    const lng = parseFloat(document.getElementById('c_lng').value);
+    
+    if (!name) {
+        alert('Cerca e seleziona un bar dalla lista');
+        return;
+    }
+    if (!price || isNaN(price)) {
+        alert('Inserisci il prezzo dello spritz');
+        return;
+    }
+    
+    let barId;
+    const existing = allBars.find(b => b.name.toLowerCase() === name.toLowerCase() && (b.city || '').toLowerCase() === (city || '').toLowerCase());
+    
+    if (existing) {
+        barId = existing.id;
+    } else {
+        // Insert new bar
+        const { data: newBar, error: barError } = await db.from('bars').insert({
+            name: name,
+            city: city || null,
+            address: addr || null,
+            source: 'user_submit',
+            latitude: isNaN(lat) ? null : lat,
+            longitude: isNaN(lng) ? null : lng
+        }).select().single();
+        
+        if (barError) {
+            console.error('Error inserting bar:', barError);
+            alert('Errore nel salvataggio del bar: ' + barError.message);
+            return;
+        }
+        
+        barId = newBar.id;
+        console.log('New bar inserted:', newBar);
+    }
+    
+    // Insert price
+    const { error: priceError } = await db.from('prices').insert({
+        bar_id: barId,
+        price: price,
+        source: 'user_submit'
+    });
+    
+    if (priceError) {
+        console.error('Error inserting price:', priceError);
+        alert('Errore nel salvataggio del prezzo: ' + priceError.message);
+        return;
+    }
+    
+    console.log('Price inserted successfully for bar:', barId);
+    
+    // Reload data to show new entry
+    await loadData();
+    
+    // Clear form
+    const inp = document.getElementById('c_places_input');
+    if (inp) inp.value = '';
+    document.getElementById('c_selected_bar').style.display = 'none';
+    ['c_name', 'c_city', 'c_address', 'c_lat', 'c_lng'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('c_price').value = '';
+    
+    // Show success message
+    document.getElementById('c_success').style.display = 'block';
+    setTimeout(() => {
+        closeForm('contribute');
+        document.getElementById('c_success').style.display = 'none';
+    }, 2500);
+}
+
+// Rest of the functions remain the same...
 function openForm(type) {
-  document.getElementById(type+'Panel').classList.add('open');
-  document.getElementById(type+'Overlay').classList.add('open');
+    document.getElementById(type + 'Panel').classList.add('open');
+    document.getElementById(type + 'Overlay').classList.add('open');
 }
 
 function closeForm(type) {
-  document.getElementById(type+'Panel').classList.remove('open');
-  document.getElementById(type+'Overlay').classList.remove('open');
+    document.getElementById(type + 'Panel').classList.remove('open');
+    document.getElementById(type + 'Overlay').classList.remove('open');
 }
 
 function initPlacesAutocomplete() {
-  const wrap = document.getElementById('c_places_wrap');
-  if (!wrap) return;
-  const input = document.createElement('input');
-  input.id = 'c_places_input';
-  input.placeholder = 'Es. Bar Basso, Milano...';
-  input.autocomplete = 'off';
-  input.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:9px 12px;font-size:13px;font-family:sans-serif;color:white;outline:none;';
-  wrap.appendChild(input);
-  const dropdown = document.createElement('div');
-  dropdown.style.cssText = 'display:none;position:absolute;z-index:9999;background:#1C1812;border:1px solid rgba(255,255,255,0.1);border-radius:6px;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.6);width:100%;max-height:240px;overflow-y:auto;';
-  wrap.appendChild(dropdown);
-  const s = document.createElement('style');
-  s.textContent = '#c_places_input:focus{border-color:#F05A28!important}.nom-item{padding:10px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06)}.nom-item:hover{background:rgba(240,90,40,0.15)}.nom-name{font-weight:600;color:white;font-size:13px;margin-bottom:2px}.nom-addr{font-size:11px;color:#6a6660}';
-  document.head.appendChild(s);
-  let timer;
-  input.addEventListener('input', () => {
-    clearTimeout(timer);
-    const q = input.value.trim();
-    if (q.length < 2) { dropdown.style.display='none'; return; }
-    timer = setTimeout(() => fetchSuggestions(q, dropdown), 400);
-  });
-  input.addEventListener('focus', () => { input.style.borderColor='#F05A28'; });
-  input.addEventListener('blur', () => { input.style.borderColor='rgba(255,255,255,0.1)'; setTimeout(()=>{ dropdown.style.display='none'; }, 200); });
+    const wrap = document.getElementById('c_places_wrap');
+    if (!wrap) return;
+    const input = document.createElement('input');
+    input.id = 'c_places_input';
+    input.placeholder = 'Es. Bar Basso, Milano...';
+    input.autocomplete = 'off';
+    input.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:5px;padding:9px 12px;font-size:13px;font-family:sans-serif;color:white;outline:none;';
+    wrap.appendChild(input);
+    const dropdown = document.createElement('div');
+    dropdown.style.cssText = 'display:none;position:absolute;z-index:9999;background:#1C1812;border:1px solid rgba(255,255,255,0.1);border-radius:6px;margin-top:2px;box-shadow:0 8px 24px rgba(0,0,0,0.6);width:100%;max-height:240px;overflow-y:auto;';
+    wrap.appendChild(dropdown);
+    const s = document.createElement('style');
+    s.textContent = '#c_places_input:focus{border-color:#F05A28!important}.nom-item{padding:10px 12px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06)}.nom-item:hover{background:rgba(240,90,40,0.15)}.nom-name{font-weight:600;color:white;font-size:13px;margin-bottom:2px}.nom-addr{font-size:11px;color:#6a6660}';
+    document.head.appendChild(s);
+    let timer;
+    input.addEventListener('input', () => {
+        clearTimeout(timer);
+        const q = input.value.trim();
+        if (q.length < 2) {
+            dropdown.style.display = 'none';
+            return;
+        }
+        timer = setTimeout(() => fetchSuggestions(q, dropdown), 400);
+    });
+    input.addEventListener('focus', () => { input.style.borderColor = '#F05A28'; });
+    input.addEventListener('blur', () => { input.style.borderColor = 'rgba(255,255,255,0.1)'; setTimeout(() => { dropdown.style.display = 'none'; }, 200); });
 }
 
 async function fetchSuggestions(query, dropdown) {
-  try {
-    const res = await fetch('/api/geocode?query=' + encodeURIComponent(query));
-    const data = await res.json();
-    dropdown.innerHTML = '';
-    if (!data.results || !data.results.length) { dropdown.style.display='none'; return; }
-    data.results.forEach(r => {
-      const item = document.createElement('div');
-      item.className = 'nom-item';
-      item.innerHTML = '<div class="nom-name">' + r.name + '</div><div class="nom-addr">' + r.address + '</div>';
-      item.addEventListener('mousedown', () => {
-        document.getElementById('c_places_input').value = r.name;
-        document.getElementById('c_name').value = r.name;
-        document.getElementById('c_city').value = r.city;
-        document.getElementById('c_address').value = r.address;
-        document.getElementById('c_lat').value = r.lat;
-        document.getElementById('c_lng').value = r.lng;
-        document.getElementById('c_selected_name').textContent = r.name;
-        document.getElementById('c_selected_addr').textContent = r.address;
-        document.getElementById('c_selected_bar').style.display = 'block';
+    try {
+        const res = await fetch('/api/geocode?query=' + encodeURIComponent(query));
+        const data = await res.json();
+        dropdown.innerHTML = '';
+        if (!data.results || !data.results.length) {
+            dropdown.style.display = 'none';
+            return;
+        }
+        data.results.forEach(r => {
+            const item = document.createElement('div');
+            item.className = 'nom-item';
+            item.innerHTML = '<div class="nom-name">' + r.name + '</div><div class="nom-addr">' + r.address + '</div>';
+            item.addEventListener('mousedown', () => {
+                document.getElementById('c_places_input').value = r.name;
+                document.getElementById('c_name').value = r.name;
+                document.getElementById('c_city').value = r.city;
+                document.getElementById('c_address').value = r.address;
+                document.getElementById('c_lat').value = r.lat;
+                document.getElementById('c_lng').value = r.lng;
+                document.getElementById('c_selected_name').textContent = r.name;
+                document.getElementById('c_selected_addr').textContent = r.address;
+                document.getElementById('c_selected_bar').style.display = 'block';
+                dropdown.style.display = 'none';
+            });
+            dropdown.appendChild(item);
+        });
+        dropdown.style.display = 'block';
+    } catch (e) {
         dropdown.style.display = 'none';
-      });
-      dropdown.appendChild(item);
-    });
-    dropdown.style.display = 'block';
-  } catch(e) { dropdown.style.display='none'; }
-}
-
-async function submitContribute() {
-  const name = document.getElementById('c_name').value.trim();
-  const city = document.getElementById('c_city').value.trim();
-  const price = parseFloat(document.getElementById('c_price').value);
-  const addr = document.getElementById('c_address').value.trim();
-  const lat = parseFloat(document.getElementById('c_lat').value);
-  const lng = parseFloat(document.getElementById('c_lng').value);
-  if(!name){alert('Cerca e seleziona un bar dalla lista');return}
-  if(!price){alert('Inserisci il prezzo dello spritz');return}
-  let barId;
-  const existing = allBars.find(b=>b.name.toLowerCase()===name.toLowerCase()&&(b.city||'').toLowerCase()===(city||'').toLowerCase());
-  if(existing){
-    barId = existing.id;
-  } else {
-    const{data,error}=await db.from('bars').insert({name,city,address:addr,source:'user_submit',latitude:isNaN(lat)?null:lat,longitude:isNaN(lng)?null:lng}).select().single();
-    if(error){alert('Errore nel salvataggio. Riprova.');return}
-    barId = data.id;
-    const newBar = {...data, latestPrice:price, calledAt:new Date().toISOString(), source:'user_submit', isNew:true, prices:[]};
-    allBars.push(newBar);
-    buildCityFilters(); updateStats(); applyFilters();
-    if(!isNaN(lat)&&!isNaN(lng)){
-      const m = L.marker([lat,lng],{icon:makeMarker(price)});
-      const mapsUrl = 'https://www.google.com/maps/search/' + encodeURIComponent(name+' '+addr);
-      m.bindPopup('<div class="popup-inner"><div class="popup-name">'+name+'</div><div class="popup-price">€'+price.toFixed(2)+'</div>'+(addr?'<div class="popup-addr">'+addr+'</div>':'')+'<a class="popup-maps" href="'+mapsUrl+'" target="_blank">Apri in Maps →</a></div>',{maxWidth:240});
-      m.addTo(map); markers[barId]=m;
-      map.flyTo([lat,lng],15,{duration:1}); m.openPopup();
     }
-  }
-  const{error}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
-  if(error){alert('Errore nel salvataggio del prezzo.');return}
-  if(existing){const bar=allBars.find(b=>b.id===barId);if(bar){bar.latestPrice=price;bar.calledAt=new Date().toISOString();updateStats();updateTicker();applyFilters();}}
-  const inp=document.getElementById('c_places_input'); if(inp) inp.value='';
-  document.getElementById('c_selected_bar').style.display='none';
-  ['c_name','c_city','c_address','c_lat','c_lng'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('c_price').value='';
-  document.getElementById('c_success').style.display='block';
-  setTimeout(()=>{closeForm('contribute');document.getElementById('c_success').style.display='none'},2500);
 }
 
 async function submitClaim() {
-  const barName=document.getElementById('cl_bar').value.trim();
-  const ownerName=document.getElementById('cl_owner').value.trim();
-  const email=document.getElementById('cl_email').value.trim();
-  if(!barName||!ownerName||!email){alert('Compila i campi obbligatori (*)');return}
-  await db.from('claims').insert({bar_name:barName,owner_name:ownerName,email,phone:document.getElementById('cl_phone').value.trim(),message:document.getElementById('cl_msg').value.trim()});
-  document.getElementById('cl_success').style.display='block';
-  setTimeout(()=>{closeForm('claim');document.getElementById('cl_success').style.display='none'},2500);
+    const barName = document.getElementById('cl_bar').value.trim();
+    const ownerName = document.getElementById('cl_owner').value.trim();
+    const email = document.getElementById('cl_email').value.trim();
+    if (!barName || !ownerName || !email) {
+        alert('Compila i campi obbligatori (*)');
+        return;
+    }
+    await db.from('claims').insert({
+        bar_name: barName,
+        owner_name: ownerName,
+        email: email,
+        phone: document.getElementById('cl_phone').value.trim(),
+        message: document.getElementById('cl_msg').value.trim()
+    });
+    document.getElementById('cl_success').style.display = 'block';
+    setTimeout(() => {
+        closeForm('claim');
+        document.getElementById('cl_success').style.display = 'none';
+    }, 2500);
 }
 
-document.getElementById('searchInput').addEventListener('input',applyFilters);
-document.getElementById('sortSelect').addEventListener('change',applyFilters);
+// Event listeners
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+document.getElementById('sortSelect').addEventListener('change', applyFilters);
+
+// Initialize everything
 initMap();
 loadData();
 initPlacesAutocomplete();
