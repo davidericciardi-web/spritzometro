@@ -795,6 +795,7 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 let allBars=[], filteredBars=[], markers={}, map;
 let activeCity='all', activeFilter='all', activeBarId=null;
+let realtimeChannel = null;
 
 // ── MAP ──
 function initMap() {
@@ -841,6 +842,7 @@ async function loadData() {
     applyFilters();
     setupRealtime();
   } catch(err) {
+    console.error('Load error:', err);
     document.getElementById('barList').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento.</div>`;
   } finally {
     document.getElementById('loader').classList.remove('active');
@@ -993,13 +995,57 @@ function selectBar(id, flyTo=true) {
   if(markers[id]) markers[id].openPopup();
 }
 
+// ── REALTIME SYNC (FIXED) ──
 function setupRealtime() {
-  db.channel('live')
-    .on('postgres_changes',{event:'INSERT',schema:'public',table:'prices'},payload=>{
-      const bar=allBars.find(b=>b.id===payload.new.bar_id);
-      if(bar){bar.latestPrice=payload.new.price;bar.calledAt=payload.new.called_at;bar.source=payload.new.source;updateStats();updateTicker();applyFilters();}
+  // Remove existing channel if any
+  if (realtimeChannel) {
+    realtimeChannel.unsubscribe();
+  }
+  
+  realtimeChannel = db.channel('live')
+    .on('postgres_changes', {event:'*', schema:'public', table:'bars'}, payload => {
+      console.log('Realtime bars change:', payload);
+      handleRealtimeUpdate();
     })
-    .subscribe();
+    .on('postgres_changes', {event:'*', schema:'public', table:'prices'}, payload => {
+      console.log('Realtime prices change:', payload);
+      handleRealtimeUpdate();
+    })
+    .subscribe(status => {
+      console.log('Realtime status:', status);
+    });
+}
+
+// Debounced reload to prevent multiple rapid updates
+let reloadTimeout = null;
+function handleRealtimeUpdate() {
+  if (reloadTimeout) clearTimeout(reloadTimeout);
+  reloadTimeout = setTimeout(() => {
+    console.log('Reloading data after realtime update...');
+    reloadData();
+  }, 500);
+}
+
+// Reload data without full page refresh
+async function reloadData() {
+  try {
+    const {data:bars, error} = await db.from('bars').select('*, prices(price, called_at, source)').order('name');
+    if (error) throw error;
+    
+    allBars = bars.map(bar => {
+      const prices = (bar.prices||[]).sort((a,b)=>new Date(b.called_at)-new Date(a.called_at));
+      const latest = prices[0];
+      const isNew = latest?.called_at && (Date.now()-new Date(latest.called_at).getTime()) < 7*24*3600*1000;
+      return {...bar, latestPrice:latest?.price||null, calledAt:latest?.called_at||null, source:latest?.source||null, isNew};
+    });
+    
+    buildCityFilters();
+    updateStats();
+    updateTicker();
+    applyFilters();
+  } catch(err) {
+    console.error('Reload error:', err);
+  }
 }
 
 // ── FORMS ──
@@ -1074,36 +1120,97 @@ async function submitContribute() {
   const addr = document.getElementById('c_address').value.trim();
   const lat = parseFloat(document.getElementById('c_lat').value);
   const lng = parseFloat(document.getElementById('c_lng').value);
+  
   if(!name){alert('Cerca e seleziona un bar dalla lista');return}
   if(!price){alert('Inserisci il prezzo dello spritz');return}
+  
   let barId;
   const existing = allBars.find(b=>b.name.toLowerCase()===name.toLowerCase()&&(b.city||'').toLowerCase()===(city||'').toLowerCase());
+  
   if(existing){
     barId = existing.id;
   } else {
-    const{data,error}=await db.from('bars').insert({name,city,address:addr,source:'user_submit',latitude:isNaN(lat)?null:lat,longitude:isNaN(lng)?null:lng}).select().single();
-    if(error){alert('Errore nel salvataggio. Riprova.');return}
+    // Insert new bar
+    const{data,error}=await db.from('bars').insert({
+      name,
+      city,
+      address:addr,
+      source:'user_submit',
+      latitude:isNaN(lat)?null:lat,
+      longitude:isNaN(lng)?null:lng
+    }).select().single();
+    
+    if(error){
+      console.error('Bar insert error:', error);
+      alert('Errore nel salvataggio del bar. Riprova.');
+      return;
+    }
+    
     barId = data.id;
-    const newBar = {...data, latestPrice:price, calledAt:new Date().toISOString(), source:'user_submit', isNew:true, prices:[]};
+    
+    // Add to local array immediately
+    const newBar = {
+      ...data, 
+      latestPrice: price, 
+      calledAt: new Date().toISOString(), 
+      source: 'user_submit', 
+      isNew: true, 
+      prices: []
+    };
     allBars.push(newBar);
-    buildCityFilters(); updateStats(); applyFilters();
+    
+    // Update UI immediately
+    buildCityFilters(); 
+    updateStats(); 
+    applyFilters();
+    
+    // Add marker immediately
     if(!isNaN(lat)&&!isNaN(lng)){
       const m = L.marker([lat,lng],{icon:makeMarker(price)});
       const mapsUrl = 'https://www.google.com/maps/search/' + encodeURIComponent(name+' '+addr);
       m.bindPopup('<div class="popup-inner"><div class="popup-name">'+name+'</div><div class="popup-price">€'+price.toFixed(2)+'</div>'+(addr?'<div class="popup-addr">'+addr+'</div>':'')+'<a class="popup-maps" href="'+mapsUrl+'" target="_blank">Apri in Maps →</a></div>',{maxWidth:240});
-      m.addTo(map); markers[barId]=m;
-      map.flyTo([lat,lng],15,{duration:1}); m.openPopup();
+      m.addTo(map); 
+      markers[barId]=m;
+      map.flyTo([lat,lng],15,{duration:1}); 
+      m.openPopup();
     }
   }
-  const{error}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
-  if(error){alert('Errore nel salvataggio del prezzo.');return}
-  if(existing){const bar=allBars.find(b=>b.id===barId);if(bar){bar.latestPrice=price;bar.calledAt=new Date().toISOString();updateStats();updateTicker();applyFilters();}}
-  const inp=document.getElementById('c_places_input'); if(inp) inp.value='';
+  
+  // Insert price
+  const{error:priceError}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
+  
+  if(priceError){
+    console.error('Price insert error:', priceError);
+    alert('Errore nel salvataggio del prezzo.');
+    return;
+  }
+  
+  // Update existing bar in local array
+  if(existing){
+    const bar=allBars.find(b=>b.id===barId);
+    if(bar){
+      bar.latestPrice=price;
+      bar.calledAt=new Date().toISOString();
+      updateStats();
+      updateTicker();
+      applyFilters();
+    }
+  }
+  
+  // Reset form
+  const inp=document.getElementById('c_places_input'); 
+  if(inp) inp.value='';
   document.getElementById('c_selected_bar').style.display='none';
   ['c_name','c_city','c_address','c_lat','c_lng'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('c_price').value='';
   document.getElementById('c_success').style.display='block';
-  setTimeout(()=>{closeForm('contribute');document.getElementById('c_success').style.display='none'},2500);
+  
+  // Force reload data to ensure sync
+  setTimeout(() => {
+    reloadData();
+    closeForm('contribute');
+    document.getElementById('c_success').style.display='none';
+  }, 1500);
 }
 
 async function submitClaim() {
