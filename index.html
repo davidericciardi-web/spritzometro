@@ -589,6 +589,7 @@
     }
   </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
@@ -827,21 +828,63 @@ function makeMarker(price) {
 async function loadData() {
   document.getElementById('loader').classList.add('active');
   try {
-    const {data:bars, error} = await db.from('bars').select('*, prices(price, called_at, source)').order('name');
+    // DEBUG: pehle check karo ke prices table se data aa raha hai ya nahi
+    const {data: allPrices, error: pricesErr} = await db.from('prices').select('*');
+    console.log('=== DEBUG: All prices from DB ===', allPrices);
+    console.log('=== DEBUG: Prices error ===', pricesErr);
+
+    // Ab bars fetch karo with prices relation
+    const {data: bars, error} = await db.from('bars').select('*, prices(price, called_at, source)').order('name');
+
+    console.log('=== DEBUG: Bars from DB ===', bars);
+    console.log('=== DEBUG: Bars error ===', error);
+
     if (error) throw error;
+
+    // Fallback: agar prices relation empty hai tu separately prices se merge karo
+    const pricesByBar = {};
+    if (allPrices && allPrices.length > 0) {
+      allPrices.forEach(p => {
+        if (!pricesByBar[p.bar_id]) pricesByBar[p.bar_id] = [];
+        pricesByBar[p.bar_id].push(p);
+      });
+    }
+
     allBars = bars.map(bar => {
-      const prices = (bar.prices||[]).sort((a,b)=>new Date(b.called_at)-new Date(a.called_at));
-      const latest = prices[0];
-      const isNew = latest?.called_at && (Date.now()-new Date(latest.called_at).getTime()) < 7*24*3600*1000;
-      return {...bar, latestPrice:latest?.price||null, calledAt:latest?.called_at||null, source:latest?.source||null, isNew};
+      // Pehle try karo relation se
+      let prices = Array.isArray(bar.prices) ? bar.prices : [];
+
+      // Agar relation empty hai tu fallback se lo
+      if (prices.length === 0 && pricesByBar[bar.id]) {
+        prices = pricesByBar[bar.id];
+      }
+
+      const sortedPrices = prices.sort((a,b) => new Date(b.called_at) - new Date(a.called_at));
+      const latest = sortedPrices[0];
+      const isNew = latest?.called_at && (Date.now() - new Date(latest.called_at).getTime()) < 7*24*3600*1000;
+
+      return {
+        ...bar,
+        prices: prices,
+        latestPrice: latest?.price ?? null,
+        calledAt: latest?.called_at ?? null,
+        source: latest?.source ?? bar.source ?? null,
+        isNew
+      };
     });
+
+    console.log('=== DEBUG: Processed allBars ===', allBars);
+    console.log('=== DEBUG: Bars with prices ===', allBars.filter(b => b.latestPrice !== null).length);
+    console.log('=== DEBUG: Bars without prices ===', allBars.filter(b => b.latestPrice === null).length);
+
     buildCityFilters();
     updateStats();
     updateTicker();
     applyFilters();
     setupRealtime();
   } catch(err) {
-    document.getElementById('barList').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento.</div>`;
+    console.error('=== DEBUG: Load error ===', err);
+    document.getElementById('barList').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento: ${err.message}</div>`;
   } finally {
     document.getElementById('loader').classList.remove('active');
   }
@@ -872,7 +915,6 @@ function updateStats() {
 }
 
 function updateTicker() {
-  // Update ticker with real city averages
   const cityAvgs = {};
   allBars.filter(b=>b.latestPrice&&b.city).forEach(b=>{
     if(!cityAvgs[b.city]) cityAvgs[b.city]=[];
@@ -950,7 +992,6 @@ function renderList() {
       <div class="bar-price ${!bar.latestPrice?'none':''}">${price}</div>
     </div>`;
 
-    // Promo card every 8 rows
     if ((i+1) % 8 === 0 && i < filteredBars.length-1) {
       html += `<div class="promo-card" onclick="openForm('contribute')">
         <p>Il tuo bar non è nell'indice?</p>
