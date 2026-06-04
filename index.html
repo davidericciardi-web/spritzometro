@@ -828,63 +828,62 @@ function makeMarker(price) {
 
 // FIXED: Load data with proper joining
 async function loadData() {
-    document.getElementById('loader').classList.add('active');
-    try {
-        // First fetch all bars
-        const { data: bars, error: barsError } = await db.from('bars').select('*').order('name');
-        console.log('Bars fetched:', bars);
-        
-        if (barsError) throw barsError;
-        
-        // Then fetch all prices separately
-        const { data: allPrices, error: pricesError } = await db.from('prices').select('*');
-        console.log('Prices fetched:', allPrices);
-        
-        if (pricesError) throw pricesError;
-        
-        // Group prices by bar_id
-        const pricesByBar = {};
-        if (allPrices && allPrices.length > 0) {
-            allPrices.forEach(p => {
-                if (!pricesByBar[p.bar_id]) {
-                    pricesByBar[p.bar_id] = [];
-                }
-                pricesByBar[p.bar_id].push(p);
-            });
+  document.getElementById('loader').classList.add('active');
+  try {
+    // STEP 1: Sabse pehle saare bars fetch karo
+    const { data: bars, error: barsError } = await db.from('bars').select('*').order('name');
+    
+    if (barsError) throw barsError;
+    
+    // STEP 2: Saare prices fetch karo separately
+    const { data: allPrices, error: pricesError } = await db.from('prices').select('*');
+    
+    if (pricesError) throw pricesError;
+    
+    // STEP 3: Prices ko bar_id ke hisaab se group karo
+    const pricesByBar = {};
+    if (allPrices && allPrices.length > 0) {
+      allPrices.forEach(p => {
+        if (!pricesByBar[p.bar_id]) {
+          pricesByBar[p.bar_id] = [];
         }
-        
-        // Merge bars with their prices
-        allBars = bars.map(bar => {
-            const barPrices = pricesByBar[bar.id] || [];
-            const sortedPrices = barPrices.sort((a, b) => new Date(b.called_at) - new Date(a.called_at));
-            const latest = sortedPrices[0];
-            const isNew = latest?.called_at && (Date.now() - new Date(latest.called_at).getTime()) < 7 * 24 * 3600 * 1000;
-            
-            return {
-                ...bar,
-                prices: barPrices,
-                latestPrice: latest?.price ?? null,
-                calledAt: latest?.called_at ?? null,
-                source: latest?.source ?? bar.source ?? null,
-                isNew: isNew
-            };
-        });
-        
-        console.log('Processed bars with prices:', allBars);
-        console.log('Bars with prices:', allBars.filter(b => b.latestPrice !== null).length);
-        
-        buildCityFilters();
-        updateStats();
-        updateTicker();
-        applyFilters();
-        setupRealtime();
-        
-    } catch (err) {
-        console.error('Load error:', err);
-        document.getElementById('barList').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento: ${err.message}</div>`;
-    } finally {
-        document.getElementById('loader').classList.remove('active');
+        pricesByBar[p.bar_id].push(p);
+      });
     }
+    
+    // STEP 4: Bars ke saath prices merge karo
+    allBars = bars.map(bar => {
+      const barPrices = pricesByBar[bar.id] || [];
+      const sortedPrices = barPrices.sort((a, b) => new Date(b.called_at) - new Date(a.called_at));
+      const latest = sortedPrices[0];
+      const isNew = latest?.called_at && (Date.now() - new Date(latest.called_at).getTime()) < 7*24*3600*1000;
+      
+      return {
+        ...bar,
+        prices: barPrices,
+        latestPrice: latest?.price ?? null,
+        calledAt: latest?.called_at ?? null,
+        source: latest?.source ?? bar.source ?? null,
+        isNew: isNew
+      };
+    });
+    
+    console.log('Total bars loaded:', allBars.length);
+    console.log('Bars WITH prices:', allBars.filter(b => b.latestPrice !== null).length);
+    console.log('Bars WITHOUT prices:', allBars.filter(b => b.latestPrice === null).length);
+    
+    buildCityFilters();
+    updateStats();
+    updateTicker();
+    applyFilters();
+    setupRealtime();
+    
+  } catch(err) {
+    console.error('Load error:', err);
+    document.getElementById('barList').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Error: ${err.message}</div>`;
+  } finally {
+    document.getElementById('loader').classList.remove('active');
+  }
 }
 
 function buildCityFilters() {
@@ -1048,79 +1047,78 @@ function setupRealtime() {
 
 // ── FIXED FORM SUBMISSION ──
 async function submitContribute() {
-    const name = document.getElementById('c_name').value.trim();
-    const city = document.getElementById('c_city').value.trim();
-    const price = parseFloat(document.getElementById('c_price').value);
-    const addr = document.getElementById('c_address').value.trim();
-    const lat = parseFloat(document.getElementById('c_lat').value);
-    const lng = parseFloat(document.getElementById('c_lng').value);
+  const name = document.getElementById('c_name').value.trim();
+  const city = document.getElementById('c_city').value.trim();
+  const price = parseFloat(document.getElementById('c_price').value);
+  const addr = document.getElementById('c_address').value.trim();
+  const lat = parseFloat(document.getElementById('c_lat').value);
+  const lng = parseFloat(document.getElementById('c_lng').value);
+  
+  if(!name){
+    alert('Cerca e seleziona un bar dalla lista');
+    return;
+  }
+  if(!price || isNaN(price)){
+    alert('Inserisci il prezzo dello spritz');
+    return;
+  }
+  
+  let barId;
+  
+  // Check if bar already exists
+  const existing = allBars.find(b => b.name.toLowerCase() === name.toLowerCase());
+  
+  if(existing){
+    barId = existing.id;
+  } else {
+    // Add new bar
+    const {data: newBar, error: barError} = await db.from('bars').insert({
+      name: name,
+      city: city || null,
+      address: addr || null,
+      source: 'user_submit',
+      latitude: isNaN(lat) ? null : lat,
+      longitude: isNaN(lng) ? null : lng
+    }).select().single();
     
-    if (!name) {
-        alert('Cerca e seleziona un bar dalla lista');
-        return;
+    if(barError){
+      alert('Error adding bar: ' + barError.message);
+      return;
     }
-    if (!price || isNaN(price)) {
-        alert('Inserisci il prezzo dello spritz');
-        return;
-    }
-    
-    let barId;
-    const existing = allBars.find(b => b.name.toLowerCase() === name.toLowerCase() && (b.city || '').toLowerCase() === (city || '').toLowerCase());
-    
-    if (existing) {
-        barId = existing.id;
-    } else {
-        // Insert new bar
-        const { data: newBar, error: barError } = await db.from('bars').insert({
-            name: name,
-            city: city || null,
-            address: addr || null,
-            source: 'user_submit',
-            latitude: isNaN(lat) ? null : lat,
-            longitude: isNaN(lng) ? null : lng
-        }).select().single();
-        
-        if (barError) {
-            console.error('Error inserting bar:', barError);
-            alert('Errore nel salvataggio del bar: ' + barError.message);
-            return;
-        }
-        
-        barId = newBar.id;
-        console.log('New bar inserted:', newBar);
-    }
-    
-    // Insert price
-    const { error: priceError } = await db.from('prices').insert({
-        bar_id: barId,
-        price: price,
-        source: 'user_submit'
-    });
-    
-    if (priceError) {
-        console.error('Error inserting price:', priceError);
-        alert('Errore nel salvataggio del prezzo: ' + priceError.message);
-        return;
-    }
-    
-    console.log('Price inserted successfully for bar:', barId);
-    
-    // Reload data to show new entry
-    await loadData();
-    
-    // Clear form
-    const inp = document.getElementById('c_places_input');
-    if (inp) inp.value = '';
-    document.getElementById('c_selected_bar').style.display = 'none';
-    ['c_name', 'c_city', 'c_address', 'c_lat', 'c_lng'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('c_price').value = '';
-    
-    // Show success message
-    document.getElementById('c_success').style.display = 'block';
-    setTimeout(() => {
-        closeForm('contribute');
-        document.getElementById('c_success').style.display = 'none';
-    }, 2500);
+    barId = newBar.id;
+  }
+  
+  // Add price
+  const {error: priceError} = await db.from('prices').insert({
+    bar_id: barId,
+    price: price,
+    source: 'user_submit'
+  });
+  
+  if(priceError){
+    alert('Error adding price: ' + priceError.message);
+    return;
+  }
+  
+  // Success! Reload everything
+  await loadData();
+  
+  // Clear form
+  document.getElementById('c_places_input').value = '';
+  document.getElementById('c_selected_bar').style.display = 'none';
+  document.getElementById('c_price').value = '';
+  document.getElementById('c_name').value = '';
+  document.getElementById('c_city').value = '';
+  document.getElementById('c_address').value = '';
+  document.getElementById('c_lat').value = '';
+  document.getElementById('c_lng').value = '';
+  
+  // Show success
+  document.getElementById('c_success').style.display = 'block';
+  setTimeout(() => {
+    closeForm('contribute');
+    document.getElementById('c_success').style.display = 'none';
+  }, 2500);
 }
 
 // Rest of the functions remain the same...
