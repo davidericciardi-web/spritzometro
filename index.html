@@ -23,7 +23,6 @@
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html, body { height: 100%; font-family: var(--sans); background: var(--bg); color: var(--text); }
 
-    /* ── HEADER ── */
     header {
       position: fixed; top: 0; left: 0; right: 0; z-index: 200;
       background: var(--dark);
@@ -69,7 +68,6 @@
     }
     .contribute-btn:hover { opacity: .85; }
 
-    /* ── TICKER ── */
     .ticker {
       position: fixed; top: 52px; left: 0; right: 0; z-index: 190;
       background: var(--orange);
@@ -101,7 +99,6 @@
       100% { transform: translateX(-50%); }
     }
 
-    /* ── HERO STATS ── */
     .hero-stats {
       position: fixed; top: 80px; left: 0; right: 0; z-index: 180;
       background: var(--dark);
@@ -136,17 +133,14 @@
       letter-spacing: 0.8px;
     }
 
-    /* ── LAYOUT ── */
     .layout {
       display: flex;
       height: 100vh;
-      padding-top: 80px; /* header + ticker */
+      padding-top: 80px;
     }
 
-    /* After hero stats loads, layout shifts */
     .layout.stats-visible { padding-top: 152px; }
 
-    /* ── SIDEBAR ── */
     .sidebar {
       width: 380px;
       min-width: 380px;
@@ -158,7 +152,6 @@
       height: 100%;
     }
 
-    /* ── FILTERS ── */
     .filters {
       padding: 12px 14px;
       border-bottom: 1px solid var(--border);
@@ -224,7 +217,6 @@
       flex-shrink: 0;
     }
 
-    /* City filters row - scrollable */
     #cityFilters {
       flex-wrap: nowrap;
       overflow-x: auto;
@@ -236,7 +228,6 @@
     #cityFilters::-webkit-scrollbar { height: 3px; }
     #cityFilters::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
-    /* ── BAR LIST ── */
     .bar-list { 
       flex: 1; 
       overflow-y: auto; 
@@ -290,7 +281,6 @@
 
     .bar-price.none { font-family: var(--sans); font-size: 14px; color: var(--muted); font-weight: 400; }
 
-    /* Promo card every 8 rows */
     .promo-card {
       margin: 4px 12px;
       background: var(--dark);
@@ -303,7 +293,6 @@
     .promo-card p { font-size: 12px; color: #9a9690; }
     .promo-card span { font-size: 11px; color: var(--orange); font-weight: 600; }
 
-    /* ── MAP ── */
     .map-container {
       flex: 1;
       position: relative;
@@ -338,7 +327,6 @@
     }
     .popup-maps:hover { opacity: .8; }
 
-    /* City shortcuts top-right of map */
     .city-shortcuts {
       position: absolute; top: 12px; right: 12px; z-index: 500;
       display: flex;
@@ -367,7 +355,6 @@
 
     .city-short:hover { background: var(--orange); }
 
-    /* Map legend bottom-left */
     .map-legend {
       position: absolute; bottom: 20px; left: 12px; z-index: 500;
       background: rgba(28,24,18,0.85);
@@ -379,7 +366,6 @@
     .legend-row { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #c8c4be; margin-bottom: 4px; font-weight: 400; }
     .lcirc { width: 20px; height: 20px; border-radius: 50%; background: var(--dark); border: 1.5px solid rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-size: 8px; color: white; font-weight: 700; flex-shrink: 0; }
 
-    /* ── SLIDE-IN FORM ── */
     .form-panel {
       position: fixed; right: -440px; top: 0; bottom: 0; width: 420px;
       background: var(--dark); z-index: 500;
@@ -444,7 +430,17 @@
       padding: 20px; color: #4ade80; font-size: 14px; font-weight: 600;
     }
 
-    /* Form overlay backdrop */
+    .form-error {
+      display: none;
+      padding: 12px;
+      background: rgba(239,68,68,0.15);
+      border: 1px solid rgba(239,68,68,0.4);
+      border-radius: 5px;
+      color: #fca5a5;
+      font-size: 12px;
+      margin-bottom: 14px;
+    }
+
     .form-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.4);
       z-index: 499; display: none;
@@ -452,7 +448,6 @@
 
     .form-overlay.open { display: block; }
 
-    /* ── LOADER ── */
     .top-loader {
       position: fixed; top: 0; left: 0; right: 0; height: 2px;
       background: var(--orange); z-index: 999; display: none;
@@ -461,7 +456,6 @@
     .top-loader.active { display: block; }
     @keyframes load { 0%{transform:scaleX(0)}70%{transform:scaleX(.8)}100%{transform:scaleX(1);opacity:0} }
 
-    /* ── MOBILE (max-width: 768px) ── */
     @media (max-width: 768px) {
       header { padding: 0 12px; gap: 8px; }
       .logo { font-size: 18px; }
@@ -563,7 +557,6 @@
       .form-panel.open { right: 0; }
     }
 
-    /* ── SMALL MOBILE (max-width: 380px) ── */
     @media (max-width: 380px) {
       .logo { font-size: 16px; }
       .contribute-btn { padding: 5px 8px; font-size: 10px; }
@@ -578,7 +571,6 @@
       .bar-price { font-size: 22px; min-width: 60px; }
     }
 
-    /* ── TABLET (769px - 1024px) ── */
     @media (min-width: 769px) and (max-width: 1024px) {
       .sidebar {
         width: 320px;
@@ -589,12 +581,12 @@
     }
   </style>
 <base target="_blank">
+<base target="_blank">
 </head>
 <body>
 
 <div class="top-loader" id="loader"></div>
 
-<!-- HEADER -->
 <header>
   <div class="logo">Spritzo<em>Metro</em></div>
   <div class="live-wrap">
@@ -607,7 +599,6 @@
   </div>
 </header>
 
-<!-- TICKER -->
 <div class="ticker">
   <div class="ticker-track" id="tickerTrack">
     <span>Milano media €9.40</span>
@@ -625,7 +616,6 @@
   </div>
 </div>
 
-<!-- HERO STATS -->
 <div class="hero-stats" id="heroStats">
   <div class="hstat">
     <div class="hstat-val orange" id="avgPrice">—</div>
@@ -645,10 +635,8 @@
   </div>
 </div>
 
-<!-- LAYOUT -->
 <div class="layout stats-visible" id="mainLayout">
 
-  <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="filters">
       <div class="search-wrap">
@@ -677,11 +665,9 @@
     </div>
   </div>
 
-  <!-- MAP -->
   <div class="map-container">
     <div id="map"></div>
 
-    <!-- City shortcuts -->
     <div class="city-shortcuts">
       <button class="city-short" onclick="flyTo(41.9,12.5,6)">Italia</button>
       <button class="city-short" onclick="flyTo(45.464,9.190,13)">Milano</button>
@@ -691,7 +677,6 @@
       <button class="city-short" onclick="flyTo(43.769,11.256,13)">Firenze</button>
     </div>
 
-    <!-- Legend -->
     <div class="map-legend">
       <div class="legend-title">Marcatori</div>
       <div class="legend-row">
@@ -707,7 +692,6 @@
 
 </div>
 
-<!-- CONTRIBUTE FORM (slide-in) -->
 <div class="form-overlay" id="contributeOverlay" onclick="closeForm('contribute')"></div>
 <div class="form-panel" id="contributePanel">
   <div class="form-head">
@@ -718,6 +702,7 @@
     <button class="form-close" onclick="closeForm('contribute')">✕</button>
   </div>
   <div class="form-body">
+    <div class="form-error" id="c_error"></div>
     <div class="field">
       <label class="field-label">Cerca il Bar *</label>
       <div id="c_places_wrap" style="width:100%;position:relative;"></div>
@@ -741,7 +726,7 @@
       <label class="field-label">Note (opzionale)</label>
       <textarea class="field-textarea" id="c_notes" placeholder="happy hour, snack inclusi, tipo spritz..."></textarea>
     </div>
-    <button class="form-submit" onclick="submitContribute()">Invia Prezzo</button>
+    <button class="form-submit" id="c_submit_btn" onclick="submitContribute()">Invia Prezzo</button>
     <div class="form-success" id="c_success">✅ Grazie! Il tuo contributo è stato ricevuto.</div>
     <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.08);">
       <div style="font-size:12px;color:#6a6660;margin-bottom:12px;">Sei il proprietario del bar?</div>
@@ -750,7 +735,6 @@
   </div>
 </div>
 
-<!-- CLAIM FORM (slide-in) -->
 <div class="form-overlay" id="claimOverlay" onclick="closeForm('claim')"></div>
 <div class="form-panel" id="claimPanel">
   <div class="form-head">
@@ -797,7 +781,6 @@ let allBars=[], filteredBars=[], markers={}, map;
 let activeCity='all', activeFilter='all', activeBarId=null;
 let realtimeChannel = null;
 
-// ── MAP ──
 function initMap() {
   map = L.map('map', {center:[42,12.5], zoom:6, zoomControl:false, attributionControl:false});
   L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:19}).addTo(map);
@@ -815,16 +798,15 @@ function flyTo(lat, lng, zoom) {
 function makeMarker(price) {
   const hasPrice = price !== null && price !== undefined;
   const bg = hasPrice ? '#1C1812' : '#F05A28';
-  const label = hasPrice ? `€${price.toFixed(1)}` : '?';
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-    <circle cx="24" cy="24" r="22" fill="${bg}" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-    <text x="24" y="25" text-anchor="middle" dominant-baseline="middle" fill="white"
-      font-family="Cormorant Garamond,serif" font-weight="600" font-size="${hasPrice?'12':'14'}">${label}</text>
-  </svg>`;
+  const label = hasPrice ? '€'+price.toFixed(1) : '?';
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">'+
+    '<circle cx="24" cy="24" r="22" fill="'+bg+'" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>'+
+    '<text x="24" y="25" text-anchor="middle" dominant-baseline="middle" fill="white"'+
+    ' font-family="Cormorant Garamond,serif" font-weight="600" font-size="'+(hasPrice?'12':'14')+'">'+label+'</text>'+
+    '</svg>';
   return L.divIcon({html:svg, className:'', iconSize:[48,48], iconAnchor:[24,24], popupAnchor:[0,-26]});
 }
 
-// ── LOAD DATA ──
 async function loadData() {
   document.getElementById('loader').classList.add('active');
   try {
@@ -843,7 +825,7 @@ async function loadData() {
     setupRealtime();
   } catch(err) {
     console.error('Load error:', err);
-    document.getElementById('barList').innerHTML = `<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento.</div>`;
+    document.getElementById('barList').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento.</div>';
   } finally {
     document.getElementById('loader').classList.remove('active');
   }
@@ -852,13 +834,13 @@ async function loadData() {
 function buildCityFilters() {
   const cities = [...new Set(allBars.map(b=>b.city).filter(Boolean))].sort();
   const wrap = document.getElementById('cityFilters');
-  wrap.innerHTML = `<button class="chip active" data-city="all" onclick="setCity('all')">Italia</button>`;
+  wrap.innerHTML = '<button class="chip active" data-city="all" onclick="setCity(\'all\')">Italia</button>';
   cities.forEach(c => {
     const btn = document.createElement('button');
     btn.className='chip'; btn.dataset.city=c; btn.textContent=c;
     btn.onclick=()=>setCity(c); wrap.appendChild(btn);
   });
-  document.getElementById('liveCount').textContent = `${allBars.length} bar live`;
+  document.getElementById('liveCount').textContent = allBars.length + ' bar live';
 }
 
 function updateStats() {
@@ -867,14 +849,13 @@ function updateStats() {
   if (wp.length) {
     const prices = wp.map(b=>b.latestPrice);
     const avg = prices.reduce((s,p)=>s+p,0)/prices.length;
-    document.getElementById('avgPrice').textContent = `€${avg.toFixed(2)}`;
-    document.getElementById('minPrice').textContent = `€${Math.min(...prices).toFixed(2)}`;
-    document.getElementById('maxPrice').textContent = `€${Math.max(...prices).toFixed(2)}`;
+    document.getElementById('avgPrice').textContent = '€'+avg.toFixed(2);
+    document.getElementById('minPrice').textContent = '€'+Math.min(...prices).toFixed(2);
+    document.getElementById('maxPrice').textContent = '€'+Math.max(...prices).toFixed(2);
   }
 }
 
 function updateTicker() {
-  // Update ticker with real city averages
   const cityAvgs = {};
   allBars.filter(b=>b.latestPrice&&b.city).forEach(b=>{
     if(!cityAvgs[b.city]) cityAvgs[b.city]=[];
@@ -882,12 +863,12 @@ function updateTicker() {
   });
   const items = Object.entries(cityAvgs).map(([city,prices])=>{
     const avg = prices.reduce((s,p)=>s+p,0)/prices.length;
-    return `${city} media €${avg.toFixed(2)}`;
+    return city + ' media €' + avg.toFixed(2);
   });
-  items.push(`${allBars.length} bar monitorati`);
+  items.push(allBars.length + ' bar monitorati');
   items.push('Aggiornato ogni settimana');
   const doubled = [...items, ...items];
-  document.getElementById('tickerTrack').innerHTML = doubled.map(t=>`<span>${t}</span>`).join('');
+  document.getElementById('tickerTrack').innerHTML = doubled.map(t=>'<span>'+t+'</span>').join('');
 }
 
 function setCity(city) {
@@ -932,32 +913,31 @@ function applyFilters() {
 function renderList() {
   const list = document.getElementById('barList');
   if (!filteredBars.length) {
-    list.innerHTML=`<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Nessun bar trovato.</div>`;
+    list.innerHTML='<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Nessun bar trovato.</div>';
     return;
   }
 
   let html = '';
   filteredBars.forEach((bar,i) => {
-    const price = bar.latestPrice ? `€${bar.latestPrice.toFixed(2)}` : '—';
+    const price = bar.latestPrice ? '€'+bar.latestPrice.toFixed(2) : '—';
     const date = bar.calledAt ? new Date(bar.calledAt).toLocaleDateString('it-IT') : '';
-    const srcTag = bar.source==='ai_call' ? `<span class="tag ai">AI</span>` : bar.source==='user_submit' ? `<span class="tag user">Utente</span>` : '';
-    const newTag = bar.isNew ? `<span class="tag new">Nuovo</span>` : '';
+    const srcTag = bar.source==='ai_call' ? '<span class="tag ai">AI</span>' : bar.source==='user_submit' ? '<span class="tag user">Utente</span>' : '';
+    const newTag = bar.isNew ? '<span class="tag new">Nuovo</span>' : '';
 
-    html += `<div class="bar-item ${bar.id===activeBarId?'active':''}" onclick="selectBar('${bar.id}')" data-id="${bar.id}">
-      <div class="bar-rank">${i+1}</div>
-      <div class="bar-info">
-        <div class="bar-name">${bar.name}</div>
-        <div class="bar-sub">${bar.city||''}${date?' · '+date:''} ${srcTag}${newTag}</div>
-      </div>
-      <div class="bar-price ${!bar.latestPrice?'none':''}">${price}</div>
-    </div>`;
+    html += '<div class="bar-item '+(bar.id===activeBarId?'active':'')+'" onclick="selectBar(\''+bar.id+'\')" data-id="'+bar.id+'">'+
+      '<div class="bar-rank">'+(i+1)+'</div>'+
+      '<div class="bar-info">'+
+        '<div class="bar-name">'+bar.name+'</div>'+
+        '<div class="bar-sub">'+(bar.city||'')+(date?' · '+date:'')+' '+srcTag+newTag+'</div>'+
+      '</div>'+
+      '<div class="bar-price '+(!bar.latestPrice?'none':'')+'">'+price+'</div>'+
+    '</div>';
 
-    // Promo card every 8 rows
     if ((i+1) % 8 === 0 && i < filteredBars.length-1) {
-      html += `<div class="promo-card" onclick="openForm('contribute')">
-        <p>Il tuo bar non è nell'indice?</p>
-        <span>Aggiungilo gratis →</span>
-      </div>`;
+      html += '<div class="promo-card" onclick="openForm(\'contribute\')">'+
+        '<p>Il tuo bar non è nell\'indice?</p>'+
+        '<span>Aggiungilo gratis →</span>'+
+      '</div>';
     }
   });
 
@@ -971,15 +951,15 @@ function renderMarkers() {
     if(!bar.latitude||!bar.longitude) return;
     const m = L.marker([bar.latitude,bar.longitude], {icon:makeMarker(bar.latestPrice)});
     const addr = bar.address || '';
-    const mapsUrl = `https://www.google.com/maps/search/${encodeURIComponent(bar.name+' '+addr)}`;
-    m.bindPopup(`<div class="popup-inner">
-      <div class="popup-name">${bar.name}</div>
-      ${bar.latestPrice
-        ? `<div class="popup-price">€${bar.latestPrice.toFixed(2)}</div>`
-        : `<div class="popup-price none">Prezzo non disponibile</div>`}
-      ${addr ? `<div class="popup-addr">${addr}</div>` : ''}
-      <a class="popup-maps" href="${mapsUrl}" target="_blank">Apri in Maps →</a>
-    </div>`, {maxWidth:240});
+    const mapsUrl = 'https://www.google.com/maps/search/'+encodeURIComponent(bar.name+' '+addr);
+    m.bindPopup('<div class="popup-inner">'+
+      '<div class="popup-name">'+bar.name+'</div>'+
+      (bar.latestPrice
+        ? '<div class="popup-price">€'+bar.latestPrice.toFixed(2)+'</div>'
+        : '<div class="popup-price none">Prezzo non disponibile</div>')+
+      (addr ? '<div class="popup-addr">'+addr+'</div>' : '')+
+      '<a class="popup-maps" href="'+mapsUrl+'" target="_blank">Apri in Maps →</a>'+
+    '</div>', {maxWidth:240});
     m.on('click', ()=>selectBar(bar.id, false));
     m.addTo(map); markers[bar.id]=m;
   });
@@ -989,19 +969,17 @@ function selectBar(id, flyTo=true) {
   activeBarId=id;
   const bar=allBars.find(b=>b.id===id); if(!bar) return;
   document.querySelectorAll('.bar-item').forEach(el=>el.classList.toggle('active',el.dataset.id===id));
-  const el=document.querySelector(`.bar-item[data-id="${id}"]`);
+  const el=document.querySelector('.bar-item[data-id="'+id+'"]');
   if(el) el.scrollIntoView({behavior:'smooth',block:'nearest'});
   if(flyTo&&bar.latitude&&bar.longitude) map.flyTo([bar.latitude,bar.longitude],15,{duration:1});
   if(markers[id]) markers[id].openPopup();
 }
 
-// ── REALTIME SYNC (FIXED) ──
 function setupRealtime() {
-  // Remove existing channel if any
   if (realtimeChannel) {
     realtimeChannel.unsubscribe();
   }
-  
+
   realtimeChannel = db.channel('live')
     .on('postgres_changes', {event:'*', schema:'public', table:'bars'}, payload => {
       console.log('Realtime bars change:', payload);
@@ -1016,7 +994,6 @@ function setupRealtime() {
     });
 }
 
-// Debounced reload to prevent multiple rapid updates
 let reloadTimeout = null;
 function handleRealtimeUpdate() {
   if (reloadTimeout) clearTimeout(reloadTimeout);
@@ -1026,19 +1003,18 @@ function handleRealtimeUpdate() {
   }, 500);
 }
 
-// Reload data without full page refresh
 async function reloadData() {
   try {
     const {data:bars, error} = await db.from('bars').select('*, prices(price, called_at, source)').order('name');
     if (error) throw error;
-    
+
     allBars = bars.map(bar => {
       const prices = (bar.prices||[]).sort((a,b)=>new Date(b.called_at)-new Date(a.called_at));
       const latest = prices[0];
       const isNew = latest?.called_at && (Date.now()-new Date(latest.called_at).getTime()) < 7*24*3600*1000;
       return {...bar, latestPrice:latest?.price||null, calledAt:latest?.called_at||null, source:latest?.source||null, isNew};
     });
-    
+
     buildCityFilters();
     updateStats();
     updateTicker();
@@ -1048,7 +1024,6 @@ async function reloadData() {
   }
 }
 
-// ── FORMS ──
 function openForm(type) {
   document.getElementById(type+'Panel').classList.add('open');
   document.getElementById(type+'Overlay').classList.add('open');
@@ -1057,6 +1032,29 @@ function openForm(type) {
 function closeForm(type) {
   document.getElementById(type+'Panel').classList.remove('open');
   document.getElementById(type+'Overlay').classList.remove('open');
+}
+
+function showError(msg) {
+  const errDiv = document.getElementById('c_error');
+  errDiv.textContent = msg;
+  errDiv.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('c_error').style.display = 'none';
+}
+
+function setSubmitLoading(loading) {
+  const btn = document.getElementById('c_submit_btn');
+  if (loading) {
+    btn.textContent = 'Invio in corso...';
+    btn.disabled = true;
+    btn.style.opacity = '0.6';
+  } else {
+    btn.textContent = 'Invia Prezzo';
+    btn.disabled = false;
+    btn.style.opacity = '1';
+  }
 }
 
 function initPlacesAutocomplete() {
@@ -1114,103 +1112,110 @@ async function fetchSuggestions(query, dropdown) {
 }
 
 async function submitContribute() {
+  hideError();
+  setSubmitLoading(true);
+
   const name = document.getElementById('c_name').value.trim();
   const city = document.getElementById('c_city').value.trim();
   const price = parseFloat(document.getElementById('c_price').value);
   const addr = document.getElementById('c_address').value.trim();
   const lat = parseFloat(document.getElementById('c_lat').value);
   const lng = parseFloat(document.getElementById('c_lng').value);
-  
-  if(!name){alert('Cerca e seleziona un bar dalla lista');return}
-  if(!price){alert('Inserisci il prezzo dello spritz');return}
-  
-  let barId;
-  const existing = allBars.find(b=>b.name.toLowerCase()===name.toLowerCase()&&(b.city||'').toLowerCase()===(city||'').toLowerCase());
-  
-  if(existing){
-    barId = existing.id;
-  } else {
-    // Insert new bar
-    const{data,error}=await db.from('bars').insert({
-      name,
-      city,
-      address:addr,
-      source:'user_submit',
-      latitude:isNaN(lat)?null:lat,
-      longitude:isNaN(lng)?null:lng
-    }).select().single();
-    
-    if(error){
-      console.error('Bar insert error:', error);
-      alert('Errore nel salvataggio del bar. Riprova.');
+
+  if(!name){ showError('Cerca e seleziona un bar dalla lista'); setSubmitLoading(false); return; }
+  if(!price || isNaN(price)){ showError('Inserisci un prezzo valido dello spritz'); setSubmitLoading(false); return; }
+
+  try {
+    let barId;
+    const existing = allBars.find(b=>b.name.toLowerCase()===name.toLowerCase()&&(b.city||'').toLowerCase()===(city||'').toLowerCase());
+
+    if(existing){
+      barId = existing.id;
+      console.log('Existing bar found:', barId);
+    } else {
+      console.log('Inserting new bar...');
+
+      const barData = {
+        name: name,
+        city: city || null,
+        address: addr || null,
+        source: 'user_submit',
+        latitude: isNaN(lat) ? null : lat,
+        longitude: isNaN(lng) ? null : lng
+      };
+
+      console.log('Bar data to insert:', barData);
+
+      const {data: newBarData, error: barError} = await db
+        .from('bars')
+        .insert(barData)
+        .select()
+        .single();
+
+      if(barError){
+        console.error('Bar insert error:', barError);
+        showError('Errore nel salvataggio del bar: ' + barError.message);
+        setSubmitLoading(false);
+        return;
+      }
+
+      if(!newBarData || !newBarData.id){
+        showError('Errore: nessun ID restituito dal database');
+        setSubmitLoading(false);
+        return;
+      }
+
+      barId = newBarData.id;
+      console.log('New bar inserted with ID:', barId);
+    }
+
+    console.log('Inserting price for bar:', barId, 'price:', price);
+
+    const {data: priceData, error: priceError} = await db
+      .from('prices')
+      .insert({
+        bar_id: barId,
+        price: price,
+        source: 'user_submit',
+        called_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if(priceError){
+      console.error('Price insert error:', priceError);
+      showError('Errore nel salvataggio del prezzo: ' + priceError.message);
+      setSubmitLoading(false);
       return;
     }
-    
-    barId = data.id;
-    
-    // Add to local array immediately
-    const newBar = {
-      ...data, 
-      latestPrice: price, 
-      calledAt: new Date().toISOString(), 
-      source: 'user_submit', 
-      isNew: true, 
-      prices: []
-    };
-    allBars.push(newBar);
-    
-    // Update UI immediately
-    buildCityFilters(); 
-    updateStats(); 
-    applyFilters();
-    
-    // Add marker immediately
-    if(!isNaN(lat)&&!isNaN(lng)){
-      const m = L.marker([lat,lng],{icon:makeMarker(price)});
-      const mapsUrl = 'https://www.google.com/maps/search/' + encodeURIComponent(name+' '+addr);
-      m.bindPopup('<div class="popup-inner"><div class="popup-name">'+name+'</div><div class="popup-price">€'+price.toFixed(2)+'</div>'+(addr?'<div class="popup-addr">'+addr+'</div>':'')+'<a class="popup-maps" href="'+mapsUrl+'" target="_blank">Apri in Maps →</a></div>',{maxWidth:240});
-      m.addTo(map); 
-      markers[barId]=m;
-      map.flyTo([lat,lng],15,{duration:1}); 
-      m.openPopup();
-    }
+
+    console.log('Price inserted successfully:', priceData);
+
+    // KEY FIX: Reload fresh data from DB instead of manually pushing
+    console.log('Reloading data from database...');
+    await reloadData();
+
+    // Reset form
+    const inp = document.getElementById('c_places_input'); 
+    if(inp) inp.value = '';
+    document.getElementById('c_selected_bar').style.display = 'none';
+    ['c_name','c_city','c_address','c_lat','c_lng'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('c_price').value = '';
+    document.getElementById('c_notes').value = '';
+
+    document.getElementById('c_success').style.display = 'block';
+    setSubmitLoading(false);
+
+    setTimeout(() => {
+      closeForm('contribute');
+      document.getElementById('c_success').style.display = 'none';
+    }, 2000);
+
+  } catch(err) {
+    console.error('Unexpected error in submitContribute:', err);
+    showError('Errore imprevisto: ' + err.message);
+    setSubmitLoading(false);
   }
-  
-  // Insert price
-  const{error:priceError}=await db.from('prices').insert({bar_id:barId,price,source:'user_submit'});
-  
-  if(priceError){
-    console.error('Price insert error:', priceError);
-    alert('Errore nel salvataggio del prezzo.');
-    return;
-  }
-  
-  // Update existing bar in local array
-  if(existing){
-    const bar=allBars.find(b=>b.id===barId);
-    if(bar){
-      bar.latestPrice=price;
-      bar.calledAt=new Date().toISOString();
-      updateStats();
-      updateTicker();
-      applyFilters();
-    }
-  }
-  
-  // Reset form
-  const inp=document.getElementById('c_places_input'); 
-  if(inp) inp.value='';
-  document.getElementById('c_selected_bar').style.display='none';
-  ['c_name','c_city','c_address','c_lat','c_lng'].forEach(id=>document.getElementById(id).value='');
-  document.getElementById('c_price').value='';
-  document.getElementById('c_success').style.display='block';
-  
-  // Force reload data to ensure sync
-  setTimeout(() => {
-    reloadData();
-    closeForm('contribute');
-    document.getElementById('c_success').style.display='none';
-  }, 1500);
 }
 
 async function submitClaim() {
@@ -1230,7 +1235,6 @@ loadData();
 initPlacesAutocomplete();
 </script>
 
-<!-- BLOG SECTION -->
 <div style="background:var(--dark);padding:48px 24px;text-align:center;">
   <div style="max-width:900px;margin:0 auto;">
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--orange);margin-bottom:10px;">Blog</div>
@@ -1266,7 +1270,6 @@ initPlacesAutocomplete();
   </div>
 </div>
 
-<!-- FAQ per Google -->
 <section aria-hidden="true" style="display:none;">
   <h2>Domande Frequenti sullo Spritz in Italia</h2>
   <div><h3>Quanto costa uno Spritz in Italia?</h3><p>Il prezzo medio varia tra 4 e 9 euro a seconda della città.</p></div>
