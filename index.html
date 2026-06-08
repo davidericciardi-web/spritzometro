@@ -980,7 +980,7 @@ function setupRealtime() {
     realtimeChannel.unsubscribe();
   }
 
-  realtimeChannel = db.channel('live')
+  realtimeChannel = db.channel('live-' + Date.now())
     .on('postgres_changes', {event:'*', schema:'public', table:'bars'}, payload => {
       console.log('Realtime bars change:', payload);
       handleRealtimeUpdate();
