@@ -998,9 +998,8 @@ let reloadTimeout = null;
 function handleRealtimeUpdate() {
   if (reloadTimeout) clearTimeout(reloadTimeout);
   reloadTimeout = setTimeout(() => {
-    console.log('Reloading data after realtime update...');
     reloadData();
-  }, 500);
+}, 1500); // 500 ki jagah 1500
 }
 
 async function reloadData() {
@@ -1193,6 +1192,7 @@ async function submitContribute() {
 
     // KEY FIX: Reload fresh data from DB instead of manually pushing
     console.log('Reloading data from database...');
+    await new Promise(r => setTimeout(r, 800)); // price save hone ka wait
     await reloadData();
 
     // Reset form
