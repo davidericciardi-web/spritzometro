@@ -1194,6 +1194,9 @@ async function submitContribute() {
     console.log('Reloading data from database...');
     await new Promise(r => setTimeout(r, 800)); // price save hone ka wait
     await reloadData();
+    // Reset city filter to show all bars including newly added
+    activeCity = 'all';
+    document.querySelectorAll('[data-city]').forEach(b => b.classList.toggle('active', b.dataset.city === 'all'));
 
     // Reset form
     const inp = document.getElementById('c_places_input'); 
