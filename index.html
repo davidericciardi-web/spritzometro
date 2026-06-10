@@ -1092,7 +1092,8 @@ async function fetchSuggestions(query, dropdown) {
       const item = document.createElement('div');
       item.className = 'nom-item';
       item.innerHTML = '<div class="nom-name">' + r.name + '</div><div class="nom-addr">' + r.address + '</div>';
-      item.addEventListener('mousedown', () => {
+      item.addEventListener('mousedown', (e) => {
+        e.preventDefault(); // blur hone se rokta hai
         document.getElementById('c_places_input').value = r.name;
         document.getElementById('c_name').value = r.name;
         document.getElementById('c_city').value = r.city;
