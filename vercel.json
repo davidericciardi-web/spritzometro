@@ -7,6 +7,11 @@
     { "source": "/blog", "destination": "/blog.html" },
     { "source": "/blog/spritz-milano-sotto-5-euro", "destination": "/blog/spritz-milano-sotto-5-euro.html" },
     { "source": "/blog/guida-spritz-roma", "destination": "/blog/guida-spritz-roma.html" },
-    { "source": "/blog/spritz-venezia-bacari", "destination": "/blog/spritz-venezia-bacari.html" }
+    { "source": "/blog/spritz-venezia-bacari", "destination": "/blog/spritz-venezia-bacari.html" },
+    { "source": "/spritz-price-milan", "destination": "/spritz-price-milan.html" },
+    { "source": "/spritz-price-rome", "destination": "/spritz-price-rome.html" },
+    { "source": "/spritz-price-naples", "destination": "/spritz-price-naples.html" },
+    { "source": "/spritz-price-venice", "destination": "/spritz-price-venice.html" },
+    { "source": "/spritz-price-florence", "destination": "/spritz-price-florence.html" }
   ]
 }
