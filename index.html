@@ -856,6 +856,7 @@ async function submitContribute() {
     await reloadData();
     activeCity = 'all';
     document.querySelectorAll('[data-city]').forEach(function(b){ b.classList.toggle('active', b.dataset.city === 'all'); });
+    applyFilters();  // ← yeh line add karo
     var inp = document.getElementById('c_places_input');
     if (inp) inp.value = '';
     document.getElementById('c_selected_bar').style.display = 'none';
