@@ -260,6 +260,7 @@
     <a href="#map-section" class="nav-link">Mappa</a>
     <a href="/blog" class="nav-link">Blog</a>
     <a href="#city-pages" class="nav-link">Città</a>
+    <a href="/en" style="background:rgba(255,255,255,0.12);color:white;border:1px solid rgba(255,255,255,0.25);border-radius:5px;padding:6px 12px;font-size:12px;font-weight:600;font-family:var(--sans);text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">&#127468;&#127463; EN</a>
     <button class="btn-primary" onclick="openForm('contribute')">+ Segnala Prezzo</button>
   </nav>
 </header>
@@ -856,7 +857,6 @@ async function submitContribute() {
     await reloadData();
     activeCity = 'all';
     document.querySelectorAll('[data-city]').forEach(function(b){ b.classList.toggle('active', b.dataset.city === 'all'); });
-    applyFilters();  // ← yeh line add karo
     var inp = document.getElementById('c_places_input');
     if (inp) inp.value = '';
     document.getElementById('c_selected_bar').style.display = 'none';
