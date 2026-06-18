@@ -215,10 +215,6 @@
     .form-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:599;display:none;backdrop-filter:blur(2px);}
     .form-overlay.open{display:block;}
 
-    /* LANG TOGGLE */
-    .lang-toggle {background:rgba(255,255,255,0.1);color:white;border:1px solid rgba(255,255,255,0.2);border-radius:5px;padding:6px 12px;font-size:12px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all .15s;white-space:nowrap;}
-    .lang-toggle:hover {background:rgba(255,255,255,0.2);border-color:rgba(255,255,255,0.4);}
-
     /* MOBILE */
     @media(max-width:768px){
       header{padding:0 14px;height:52px;gap:10px;}
@@ -261,11 +257,10 @@
     <span id="liveCount">— bar live</span>
   </div>
   <nav class="header-nav">
-    <a href="#map-section" class="nav-link" data-i18n="nav-map">Mappa</a>
+    <a href="#map-section" class="nav-link">Mappa</a>
     <a href="/blog" class="nav-link">Blog</a>
-    <a href="#city-pages" class="nav-link" data-i18n="nav-cities">Città</a>
-    <button class="lang-toggle" id="langToggle" onclick="toggleLang()" title="Switch to English">🇬🇧 EN</button>
-    <button class="btn-primary" id="btn-contribute" onclick="openForm('contribute')">+ Segnala Prezzo</button>
+    <a href="#city-pages" class="nav-link">Città</a>
+    <button class="btn-primary" onclick="openForm('contribute')">+ Segnala Prezzo</button>
   </nav>
 </header>
 
@@ -293,10 +288,10 @@
 </div>
 
 <div class="hero-stats" id="heroStats">
-  <div class="hstat"><div class="hstat-val orange" id="avgPrice">—</div><div class="hstat-lbl" data-i18n="stat-avg">Media Nazionale</div></div>
-  <div class="hstat"><div class="hstat-val" id="minPrice">—</div><div class="hstat-lbl" data-i18n="stat-min">Più Economico</div></div>
-  <div class="hstat"><div class="hstat-val" id="maxPrice">—</div><div class="hstat-lbl" data-i18n="stat-max">Più Caro</div></div>
-  <div class="hstat"><div class="hstat-val" id="totalBars">—</div><div class="hstat-lbl" data-i18n="stat-total">Bar Monitorati</div></div>
+  <div class="hstat"><div class="hstat-val orange" id="avgPrice">—</div><div class="hstat-lbl">Media Nazionale</div></div>
+  <div class="hstat"><div class="hstat-val" id="minPrice">—</div><div class="hstat-lbl">Più Economico</div></div>
+  <div class="hstat"><div class="hstat-val" id="maxPrice">—</div><div class="hstat-lbl">Più Caro</div></div>
+  <div class="hstat"><div class="hstat-val" id="totalBars">—</div><div class="hstat-lbl">Bar Monitorati</div></div>
 </div>
 
 <div id="map-section" class="app-section">
@@ -304,18 +299,18 @@
     <div class="filters">
       <div class="search-wrap">
         <span class="search-icon">🔍</span>
-        <input class="search-input" id="searchInput" type="text" id="searchPlaceholder" placeholder="Cerca bar o città..."/>
+        <input class="search-input" id="searchInput" type="text" placeholder="Cerca bar o città..."/>
       </div>
       <div class="chip-row">
-        <button class="chip active" data-filter="all" onclick="setFilter('all')" data-i18n="filter-all">Tutti</button>
-        <button class="chip" data-filter="under4" onclick="setFilter('under4')" data-i18n="filter-under4">Sotto €4</button>
+        <button class="chip active" data-filter="all" onclick="setFilter('all')">Tutti</button>
+        <button class="chip" data-filter="under4" onclick="setFilter('under4')">Sotto €4</button>
         <button class="chip" data-filter="mid" onclick="setFilter('mid')">€4–€7</button>
-        <button class="chip" data-filter="over7" onclick="setFilter('over7')" data-i18n="filter-over7">Sopra €7</button>
+        <button class="chip" data-filter="over7" onclick="setFilter('over7')">Sopra €7</button>
         <select class="sort-select" id="sortSelect">
-          <option value="price_asc" data-i18n="sort-cheap">Più economico</option>
-          <option value="price_desc" data-i18n="sort-exp">Più caro</option>
+          <option value="price_asc">Più economico</option>
+          <option value="price_desc">Più caro</option>
           <option value="name_asc">A–Z</option>
-          <option value="recent" data-i18n="sort-recent">Recenti</option>
+          <option value="recent">Recenti</option>
         </select>
       </div>
       <div class="chip-row" id="cityFilters">
@@ -337,9 +332,9 @@
       <button class="city-short" onclick="flyTo(43.769,11.256,13)">Firenze</button>
     </div>
     <div class="map-legend">
-      <div class="legend-title" data-i18n="legend-title">Marcatori</div>
-      <div class="legend-row"><div class="lcirc">€</div data-i18n="legend-price">Prezzo Aperol Spritz</div>
-      <div class="legend-row"><div class="lcirc" style="background:var(--orange)">?</div data-i18n="legend-na">Prezzo non disponibile</div>
+      <div class="legend-title">Marcatori</div>
+      <div class="legend-row"><div class="lcirc">€</div>Prezzo Aperol Spritz</div>
+      <div class="legend-row"><div class="lcirc" style="background:var(--orange)">?</div>Prezzo non disponibile</div>
     </div>
   </div>
 </div>
@@ -578,7 +573,7 @@ function buildCityFilters() {
     btn.onclick = function(){ setCity(c); };
     wrap.appendChild(btn);
   });
-  document.getElementById('liveCount').textContent = allBars.length + ' ' + translations[currentLang]['bars-live'];
+  document.getElementById('liveCount').textContent = allBars.length + ' bar live';
 }
 
 function updateStats() {
@@ -603,8 +598,8 @@ function updateTicker() {
     var avg = cityAvgs[city].reduce(function(s,p){ return s+p; }, 0) / cityAvgs[city].length;
     return city + ' media \u20ac' + avg.toFixed(2);
   });
-  items.push(allBars.length + ' ' + translations[currentLang]['ticker-monitored']);
-  items.push(translations[currentLang]['ticker-updated']);
+  items.push(allBars.length + ' bar monitorati');
+  items.push('Prezzi aggiornati dagli utenti');
   var doubled = items.concat(items);
   document.getElementById('tickerTrack').innerHTML = doubled.map(function(t){ return '<span>' + t + '</span>'; }).join('');
 }
@@ -647,7 +642,7 @@ function applyFilters() {
 function renderList() {
   var list = document.getElementById('barList');
   if (!filteredBars.length) {
-    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">' + translations[currentLang]['no-bars'] + '</div>';
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Nessun bar trovato.</div>';
     return;
   }
   var html = '';
@@ -833,8 +828,8 @@ async function submitContribute() {
   var addr = document.getElementById('c_address').value.trim();
   var lat = parseFloat(document.getElementById('c_lat').value);
   var lng = parseFloat(document.getElementById('c_lng').value);
-  if (!name) { showError(translations[currentLang]['err-select-bar']); setSubmitLoading(false); return; }
-  if (!price || isNaN(price)) { showError(translations[currentLang]['err-price']); setSubmitLoading(false); return; }
+  if (!name) { showError('Cerca e seleziona un bar dalla lista'); setSubmitLoading(false); return; }
+  if (!price || isNaN(price)) { showError('Inserisci un prezzo valido dello spritz'); setSubmitLoading(false); return; }
   try {
     var barId;
     var existing = null;
@@ -861,6 +856,7 @@ async function submitContribute() {
     await reloadData();
     activeCity = 'all';
     document.querySelectorAll('[data-city]').forEach(function(b){ b.classList.toggle('active', b.dataset.city === 'all'); });
+    applyFilters();  // ← yeh line add karo
     var inp = document.getElementById('c_places_input');
     if (inp) inp.value = '';
     document.getElementById('c_selected_bar').style.display = 'none';
@@ -885,171 +881,6 @@ async function submitClaim() {
   });
   document.getElementById('cl_success').style.display = 'block';
   setTimeout(function(){ closeForm('claim'); document.getElementById('cl_success').style.display = 'none'; }, 2500);
-}
-
-
-// ── LANGUAGE / i18n ──
-var currentLang = 'it';
-
-var translations = {
-  it: {
-    'nav-map': 'Mappa',
-    'nav-cities': 'Città',
-    'btn-contribute': '+ Segnala Prezzo',
-    'stat-avg': 'Media Nazionale',
-    'stat-min': 'Più Economico',
-    'stat-max': 'Più Caro',
-    'stat-total': 'Bar Monitorati',
-    'filter-all': 'Tutti',
-    'filter-under4': 'Sotto €4',
-    'filter-over7': 'Sopra €7',
-    'sort-cheap': 'Più economico',
-    'sort-exp': 'Più caro',
-    'sort-recent': 'Recenti',
-    'legend-title': 'Marcatori',
-    'legend-price': 'Prezzo Aperol Spritz',
-    'legend-na': 'Prezzo non disponibile',
-    'search-placeholder': 'Cerca bar o città...',
-    'loading': 'Caricamento...',
-    'no-bars': 'Nessun bar trovato.',
-    'bars-live': 'bar live',
-    'promo-text': "Il tuo bar non è nell'indice?",
-    'promo-cta': 'Aggiungilo gratis →',
-    'form-contribute-title': 'Segnala un Prezzo 🍊',
-    'form-contribute-sub': 'Hai visto il prezzo di uno spritz? Condividilo con la community.',
-    'form-contribute-micro': '"Aiuta altri a evitare Spritz troppo cari. Bastano meno di 20 secondi."',
-    'form-bar-label': 'Cerca il Bar *',
-    'form-bar-hint': 'Cerca e seleziona il bar — le coordinate vengono salvate automaticamente',
-    'form-price-label': 'Prezzo Aperol Spritz (€) *',
-    'form-notes-label': 'Note (opzionale)',
-    'form-notes-ph': 'happy hour, snack inclusi, tipo spritz...',
-    'form-submit': 'Invia Prezzo',
-    'form-success': '✅ Grazie! Il tuo prezzo è stato pubblicato.',
-    'form-success-sub': 'Condividi SpritzoMetro con un amico!',
-    'form-owner-q': 'Sei il proprietario del bar?',
-    'form-owner-btn': 'Richiedi ownership del tuo bar →',
-    'form-claim-title': 'Sei il Proprietario? 🏪',
-    'form-claim-sub': 'Gestisci la tua presenza su SpritzoMetro gratuitamente.',
-    'err-select-bar': 'Cerca e seleziona un bar dalla lista',
-    'err-price': 'Inserisci un prezzo valido dello spritz',
-    'ticker-updated': 'Prezzi aggiornati dagli utenti',
-    'ticker-monitored': 'bar monitorati'
-  },
-  en: {
-    'nav-map': 'Map',
-    'nav-cities': 'Cities',
-    'btn-contribute': '+ Report Price',
-    'stat-avg': 'National Average',
-    'stat-min': 'Cheapest',
-    'stat-max': 'Most Expensive',
-    'stat-total': 'Bars Monitored',
-    'filter-all': 'All',
-    'filter-under4': 'Under €4',
-    'filter-over7': 'Over €7',
-    'sort-cheap': 'Cheapest first',
-    'sort-exp': 'Most expensive',
-    'sort-recent': 'Recent',
-    'legend-title': 'Markers',
-    'legend-price': 'Aperol Spritz Price',
-    'legend-na': 'Price not available',
-    'search-placeholder': 'Search bar or city...',
-    'loading': 'Loading...',
-    'no-bars': 'No bars found.',
-    'bars-live': 'bars live',
-    'promo-text': 'Your bar not in the index?',
-    'promo-cta': 'Add it for free →',
-    'form-contribute-title': 'Report a Price 🍊',
-    'form-contribute-sub': 'Seen a Spritz price? Share it with the community.',
-    'form-contribute-micro': '"Help others avoid overpriced Spritz. Takes less than 20 seconds."',
-    'form-bar-label': 'Search Bar *',
-    'form-bar-hint': 'Search and select a bar — coordinates are saved automatically',
-    'form-price-label': 'Aperol Spritz Price (€) *',
-    'form-notes-label': 'Notes (optional)',
-    'form-notes-ph': 'happy hour, snacks included, type of spritz...',
-    'form-submit': 'Submit Price',
-    'form-success': '✅ Thank you! Your price has been published.',
-    'form-success-sub': 'Share SpritzoMetro with a friend!',
-    'form-owner-q': 'Are you the bar owner?',
-    'form-owner-btn': 'Claim your bar →',
-    'form-claim-title': 'Are You the Owner? 🏪',
-    'form-claim-sub': 'Manage your bar on SpritzoMetro for free.',
-    'err-select-bar': 'Search and select a bar from the list',
-    'err-price': 'Please enter a valid Spritz price',
-    'ticker-updated': 'Prices updated by users',
-    'ticker-monitored': 'bars monitored'
-  }
-};
-
-function applyLang(lang) {
-  currentLang = lang;
-  var t = translations[lang];
-  
-  // data-i18n elements
-  document.querySelectorAll('[data-i18n]').forEach(function(el) {
-    var key = el.getAttribute('data-i18n');
-    if (t[key]) el.textContent = t[key];
-  });
-
-  // Search placeholder
-  var si = document.getElementById('searchInput');
-  if (si) si.placeholder = t['search-placeholder'];
-
-  // Contribute button
-  var cb = document.getElementById('btn-contribute');
-  if (cb) cb.textContent = t['btn-contribute'];
-
-  // Lang toggle button
-  var lt = document.getElementById('langToggle');
-  if (lt) lt.textContent = lang === 'it' ? '🇬🇧 EN' : '🇮🇹 IT';
-
-  // Form texts
-  var map = {
-    'form-contribute-title': '.form-title',
-    'form-contribute-sub': '.form-sub'
-  };
-  var panel = document.getElementById('contributePanel');
-  if (panel) {
-    var title = panel.querySelector('.form-title');
-    if (title) title.textContent = t['form-contribute-title'];
-    var sub = panel.querySelector('.form-sub');
-    if (sub) sub.textContent = t['form-contribute-sub'];
-    var micro = panel.querySelector('.form-microcopy');
-    if (micro) micro.textContent = t['form-contribute-micro'];
-    var submitBtn = panel.querySelector('.form-submit');
-    if (submitBtn) submitBtn.textContent = t['form-submit'];
-  }
-  
-  var claimPanel = document.getElementById('claimPanel');
-  if (claimPanel) {
-    var ct = claimPanel.querySelector('.form-title');
-    if (ct) ct.textContent = t['form-claim-title'];
-    var cs = claimPanel.querySelector('.form-sub');
-    if (cs) cs.textContent = t['form-claim-sub'];
-  }
-
-  // HTML lang attribute
-  document.documentElement.lang = lang === 'it' ? 'it' : 'en';
-
-  // URL
-  if (lang === 'en') {
-    history.replaceState(null, '', '/en');
-  } else {
-    history.replaceState(null, '', '/');
-  }
-
-  // Re-render list with new lang
-  renderList();
-}
-
-function toggleLang() {
-  applyLang(currentLang === 'it' ? 'en' : 'it');
-}
-
-// Check URL on load
-if (window.location.pathname === '/en') {
-  document.addEventListener('DOMContentLoaded', function() {
-    applyLang('en');
-  });
 }
 
 document.getElementById('searchInput').addEventListener('input', applyFilters);
