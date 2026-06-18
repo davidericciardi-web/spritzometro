@@ -12,7 +12,16 @@
     { "source": "/spritz-price-rome", "destination": "/spritz-price-rome.html" },
     { "source": "/spritz-price-naples", "destination": "/spritz-price-naples.html" },
     { "source": "/spritz-price-venice", "destination": "/spritz-price-venice.html" },
-    { "source": "/spritz-price-florence", "destination": "/spritz-price-florence.html" }
-    { "source": "/en", "destination": "/index.html" }
+    { "source": "/spritz-price-florence", "destination": "/spritz-price-florence.html" },
+    { "source": "/en", "destination": "/en/index.html" },
+    { "source": "/en/blog", "destination": "/en/blog.html" },
+    { "source": "/en/blog/spritz-milan-under-5-euros", "destination": "/en/blog/spritz-milan-under-5-euros.html" },
+    { "source": "/en/blog/spritz-rome-guide", "destination": "/en/blog/spritz-rome-guide.html" },
+    { "source": "/en/blog/spritz-venice-bacari", "destination": "/en/blog/spritz-venice-bacari.html" },
+    { "source": "/en/spritz-price-milan", "destination": "/en/spritz-price-milan.html" },
+    { "source": "/en/spritz-price-rome", "destination": "/en/spritz-price-rome.html" },
+    { "source": "/en/spritz-price-naples", "destination": "/en/spritz-price-naples.html" },
+    { "source": "/en/spritz-price-venice", "destination": "/en/spritz-price-venice.html" },
+    { "source": "/en/spritz-price-florence", "destination": "/en/spritz-price-florence.html" }
   ]
 }
