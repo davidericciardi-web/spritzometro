@@ -13,5 +13,6 @@
     { "source": "/spritz-price-naples", "destination": "/spritz-price-naples.html" },
     { "source": "/spritz-price-venice", "destination": "/spritz-price-venice.html" },
     { "source": "/spritz-price-florence", "destination": "/spritz-price-florence.html" }
+    { "source": "/en", "destination": "/index.html" }
   ]
 }
