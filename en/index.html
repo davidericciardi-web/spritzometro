@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <title>SpritzoMetro — Aperol Spritz Prices in Italy | Milan Rome Naples</title>
+  <meta name="description" content="Discover how much a Spritz costs at bars across Italy. Updated Aperol Spritz prices in Milan, Rome, Naples, Venice and Florence."/>
+  <meta name="robots" content="index, follow"/>
+  <link rel="canonical" href="https://spritzometro.com/en"/>
+  <meta property="og:type" content="website"/>
+  <meta property="og:url" content="https://spritzometro.com"/>
+  <meta property="og:title" content="SpritzoMetro — Aperol Spritz Prices in Italy"/>
+  <meta property="og:description" content="Scopri quanto costa uno Spritz nei bar di tutta Italia."/>
+  <meta property="og:image" content="https://spritzometro.com/og-image.png"/>
+  <meta property="og:site_name" content="SpritzoMetro"/>
+  <link rel="icon" type="image/svg+xml" href="/logo.svg"/>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-CR0LB8R0SZ"></script>
+  <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-CR0LB8R0SZ');</script>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
+  <style>
+    :root {
+      --dark:#1C1812; --bg:#FAFAF7; --orange:#F05A28; --cream:#FDF6EC;
+      --text:#1C1812; --muted:#8a8680; --border:#e8e4de;
+      --serif:'Cormorant Garamond',serif; --sans:'DM Sans',sans-serif;
+    }
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+    html{scroll-behavior:smooth;}
+    body{font-family:var(--sans);background:var(--bg);color:var(--text);overflow-x:hidden;}
+
+    /* LOADER */
+    .top-loader{position:fixed;top:0;left:0;right:0;height:3px;background:var(--orange);z-index:9999;display:none;animation:load 1.5s ease-in-out infinite;transform-origin:left;}
+    .top-loader.active{display:block;}
+    @keyframes load{0%{transform:scaleX(0)}70%{transform:scaleX(.8)}100%{transform:scaleX(1);opacity:0}}
+
+    /* HEADER */
+    header{position:fixed;top:0;left:0;right:0;z-index:200;background:var(--dark);height:56px;display:flex;align-items:center;padding:0 24px;gap:16px;border-bottom:1px solid rgba(255,255,255,0.06);}
+    .logo{font-family:var(--serif);font-size:24px;font-weight:700;color:#FAFAF7;letter-spacing:-0.3px;text-decoration:none;}
+    .logo em{font-style:italic;color:var(--orange);}
+    .live-wrap{display:flex;align-items:center;gap:6px;font-size:11px;color:#6a6660;}
+    .live-dot{width:6px;height:6px;background:#22c55e;border-radius:50%;animation:lpulse 2s ease-in-out infinite;box-shadow:0 0 6px #22c55e;}
+    @keyframes lpulse{0%,100%{opacity:1}50%{opacity:.3}}
+    .header-nav{margin-left:auto;display:flex;align-items:center;gap:8px;}
+    .nav-link{color:#9a9690;font-size:13px;font-weight:500;text-decoration:none;padding:6px 12px;border-radius:4px;transition:color .15s;}
+    .nav-link:hover{color:white;}
+    .btn-primary{background:var(--orange);color:white;border:none;border-radius:6px;padding:8px 16px;font-size:12px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:opacity .15s;white-space:nowrap;text-decoration:none;display:inline-flex;align-items:center;}
+    .btn-primary:hover{opacity:.85;}
+
+    /* TICKER */
+    .ticker{position:fixed;top:56px;left:0;right:0;z-index:190;background:var(--orange);height:30px;overflow:hidden;display:flex;align-items:center;}
+    .ticker-track{display:flex;animation:ticker-scroll 35s linear infinite;white-space:nowrap;}
+    .ticker-track span{font-size:11px;font-weight:700;color:white;padding:0 28px;letter-spacing:0.4px;}
+    .ticker-track span::after{content:'·';margin-left:28px;opacity:0.5;}
+    @keyframes ticker-scroll{0%{transform:translateX(0)}100%{transform:translateX(-50%)}}
+
+    /* HERO */
+    .hero{position:relative;height:520px;overflow:hidden;margin-top:86px;}
+    .hero-img{width:100%;height:100%;object-fit:cover;object-position:center;}
+    .hero-overlay{position:absolute;inset:0;background:linear-gradient(to bottom,rgba(28,24,18,0.3) 0%,rgba(28,24,18,0.92) 100%);}
+    .hero-content{position:absolute;bottom:0;left:0;right:0;padding:52px 48px;max-width:860px;}
+    .hero-eyebrow{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:18px;}
+    .hero-eyebrow span{width:20px;height:1px;background:var(--orange);}
+    .hero h1{font-family:var(--serif);font-size:clamp(36px,5.5vw,68px);font-weight:700;color:white;line-height:1.05;margin-bottom:16px;}
+    .hero h1 em{font-style:italic;color:var(--orange);}
+    .hero-sub{font-size:clamp(14px,1.8vw,17px);color:rgba(255,255,255,0.7);max-width:520px;line-height:1.65;margin-bottom:28px;font-weight:300;}
+    .hero-ctas{display:flex;gap:12px;flex-wrap:wrap;}
+    .btn-hero-primary{background:var(--orange);color:white;border:none;border-radius:8px;padding:13px 26px;font-size:14px;font-weight:700;font-family:var(--sans);cursor:pointer;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px;}
+    .btn-hero-primary:hover{opacity:.9;transform:translateY(-1px);}
+    .btn-hero-secondary{background:transparent;color:white;border:1px solid rgba(255,255,255,0.3);border-radius:8px;padding:13px 26px;font-size:14px;font-weight:500;font-family:var(--sans);cursor:pointer;transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:8px;}
+    .btn-hero-secondary:hover{border-color:rgba(255,255,255,0.6);}
+
+    /* HERO STATS */
+    .hero-stats{background:var(--dark);display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid rgba(255,255,255,0.08);}
+    .hstat{padding:18px 20px;border-right:1px solid rgba(255,255,255,0.08);text-align:center;}
+    .hstat:last-child{border-right:none;}
+    .hstat-val{font-family:var(--serif);font-size:38px;font-weight:700;color:#FAFAF7;line-height:1;margin-bottom:5px;}
+    .hstat-val.orange{color:var(--orange);}
+    .hstat-lbl{font-size:10px;font-weight:600;color:#4a4640;text-transform:uppercase;letter-spacing:1px;}
+
+    /* APP */
+    .app-section{display:flex;height:calc(100vh - 56px - 30px);min-height:500px;}
+
+    /* SIDEBAR */
+    .sidebar{width:400px;min-width:400px;background:var(--bg);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;}
+    .filters{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:10px;flex-shrink:0;background:white;}
+    .search-wrap{position:relative;}
+    .search-input{width:100%;border:1.5px solid var(--border);border-radius:8px;padding:10px 14px 10px 36px;font-size:13px;font-family:var(--sans);background:var(--bg);color:var(--text);outline:none;transition:border-color .15s;}
+    .search-input:focus{border-color:var(--orange);}
+    .search-input::placeholder{color:var(--muted);}
+    .search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--muted);}
+    .chip-row{display:flex;gap:5px;flex-wrap:nowrap;align-items:center;overflow-x:auto;scrollbar-width:none;padding-bottom:1px;}
+    .chip-row::-webkit-scrollbar{display:none;}
+    .chip{padding:5px 11px;border:1.5px solid var(--border);border-radius:20px;font-size:11px;font-weight:600;font-family:var(--sans);color:var(--muted);background:transparent;cursor:pointer;transition:all .15s;white-space:nowrap;flex-shrink:0;}
+    .chip:hover{border-color:var(--orange);color:var(--orange);}
+    .chip.active{background:var(--dark);border-color:var(--dark);color:white;}
+    .sort-select{margin-left:auto;border:1.5px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;font-family:var(--sans);color:var(--muted);background:var(--bg);outline:none;cursor:pointer;flex-shrink:0;}
+    .bar-list{flex:1;overflow-y:auto;min-height:0;}
+    .bar-list::-webkit-scrollbar{width:3px;}
+    .bar-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px;}
+    .bar-item{display:flex;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s;gap:12px;}
+    .bar-item:hover{background:var(--cream);}
+    .bar-item.active{background:var(--cream);border-left:3px solid var(--orange);}
+    .bar-rank{font-size:11px;font-weight:600;color:var(--muted);min-width:22px;}
+    .bar-info{flex:1;min-width:0;}
+    .bar-name{font-size:14px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:3px;}
+    .bar-sub{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;gap:5px;align-items:center;}
+    .tag{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;text-transform:uppercase;letter-spacing:0.4px;}
+    .tag.user{background:#fff7ed;color:var(--orange);}
+    .tag.new{background:#fef3c7;color:#92400e;}
+    .tag.ai{background:#f0fdf4;color:#16a34a;}
+    .bar-price{font-family:var(--serif);font-size:28px;font-weight:700;color:var(--text);min-width:72px;text-align:right;line-height:1;}
+    .bar-price.none{font-family:var(--sans);font-size:13px;color:var(--muted);font-weight:400;}
+    .promo-card{margin:6px 12px;background:var(--dark);border-radius:8px;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;}
+    .promo-card p{font-size:12px;color:#9a9690;}
+    .promo-card span{font-size:11px;color:var(--orange);font-weight:700;}
+
+    /* MAP */
+    .map-container{flex:1;position:relative;height:100%;overflow:hidden;min-width:0;}
+    #map{height:100%;width:100%;}
+    .leaflet-popup-content-wrapper{border-radius:10px;box-shadow:0 8px 32px rgba(0,0,0,0.15);font-family:var(--sans);padding:0;}
+    .leaflet-popup-content{margin:0;min-width:200px;}
+    .leaflet-popup-tip-container{display:none;}
+    .leaflet-popup-close-button{color:var(--muted)!important;top:10px!important;right:10px!important;}
+    .popup-inner{padding:16px 18px;}
+    .popup-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;line-height:1.2;}
+    .popup-price{font-family:var(--serif);font-size:36px;font-weight:700;color:var(--orange);line-height:1;margin-bottom:4px;}
+    .popup-price.none{font-family:var(--sans);font-size:13px;font-weight:400;color:var(--muted);}
+    .popup-addr{font-size:11px;color:var(--muted);margin-bottom:12px;}
+    .popup-actions{display:flex;gap:8px;}
+    .popup-maps{display:inline-flex;align-items:center;gap:4px;padding:7px 12px;background:var(--dark);color:white;border-radius:5px;font-size:11px;font-weight:700;text-decoration:none;flex:1;justify-content:center;}
+    .popup-maps:hover{opacity:.8;}
+    .popup-report{display:inline-flex;align-items:center;padding:7px 12px;background:transparent;color:var(--orange);border:1px solid var(--orange);border-radius:5px;font-size:11px;font-weight:700;cursor:pointer;flex:1;justify-content:center;font-family:var(--sans);}
+    .popup-report:hover{background:var(--orange);color:white;}
+    .city-shortcuts{position:absolute;top:12px;right:12px;z-index:500;display:flex;flex-direction:column;gap:5px;max-height:calc(100% - 80px);overflow-y:auto;scrollbar-width:none;}
+    .city-shortcuts::-webkit-scrollbar{display:none;}
+    .city-short{background:rgba(28,24,18,0.9);backdrop-filter:blur(10px);color:white;border:none;border-radius:5px;padding:6px 12px;font-size:11px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:background .15s;white-space:nowrap;text-align:left;flex-shrink:0;}
+    .city-short:hover{background:var(--orange);}
+    .map-legend{position:absolute;bottom:20px;left:12px;z-index:500;background:rgba(28,24,18,0.88);backdrop-filter:blur(10px);border-radius:8px;padding:12px 16px;}
+    .legend-title{font-size:9px;font-weight:700;color:#6a6660;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px;}
+    .legend-row{display:flex;align-items:center;gap:8px;font-size:11px;color:#c8c4be;margin-bottom:5px;}
+    .legend-row:last-child{margin-bottom:0;}
+    .lcirc{width:22px;height:22px;border-radius:50%;background:var(--dark);border:1.5px solid rgba(255,255,255,0.3);display:flex;align-items:center;justify-content:center;font-size:8px;color:white;font-weight:700;flex-shrink:0;}
+
+    /* SECTIONS */
+    .section{padding:64px 24px;max-width:1100px;margin:0 auto;}
+    .section-eyebrow{font-size:11px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;}
+    .section-title{font-family:var(--serif);font-size:clamp(28px,4vw,44px);font-weight:700;color:var(--text);margin-bottom:16px;line-height:1.1;}
+    .section-sub{font-size:16px;color:var(--muted);max-width:560px;line-height:1.6;margin-bottom:40px;}
+    .report-section{background:var(--cream);}
+    .report-inner{max-width:1100px;margin:0 auto;padding:64px 24px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;}
+    .report-steps{display:flex;flex-direction:column;gap:20px;}
+    .report-step{display:flex;align-items:flex-start;gap:16px;}
+    .step-num{width:32px;height:32px;border-radius:50%;background:var(--orange);color:white;font-weight:700;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+    .step-content h4{font-size:15px;font-weight:700;margin-bottom:4px;}
+    .step-content p{font-size:13px;color:var(--muted);margin:0;}
+    .owner-section{background:var(--dark);}
+    .owner-inner{max-width:1100px;margin:0 auto;padding:64px 24px;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;}
+    .section-title-light{font-family:var(--serif);font-size:clamp(28px,4vw,44px);font-weight:700;color:white;margin-bottom:16px;line-height:1.1;}
+    .section-sub-light{font-size:16px;color:#6a6660;max-width:480px;line-height:1.6;margin-bottom:32px;}
+    .owner-benefits{display:flex;flex-direction:column;gap:14px;}
+    .owner-benefit{display:flex;align-items:center;gap:12px;color:#c8c4be;font-size:14px;}
+    .benefit-icon{font-size:18px;}
+    .btn-outline-light{display:inline-flex;align-items:center;gap:8px;border:1.5px solid rgba(255,255,255,0.3);color:white;border-radius:8px;padding:12px 24px;font-size:14px;font-weight:600;font-family:var(--sans);cursor:pointer;transition:all .2s;text-decoration:none;background:transparent;}
+    .btn-outline-light:hover{border-color:var(--orange);color:var(--orange);}
+    .trust-strip{display:flex;flex-wrap:wrap;gap:12px;margin-top:28px;}
+    .trust-badge{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:7px 12px;font-size:12px;color:#9a9690;}
+    .blog-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:20px;}
+    .blog-card{background:white;border:1px solid var(--border);border-radius:12px;overflow:hidden;text-decoration:none;color:var(--text);transition:transform .15s,box-shadow .15s;}
+    .blog-card:hover{transform:translateY(-4px);box-shadow:0 12px 40px rgba(0,0,0,0.1);}
+    .blog-card img{width:100%;height:180px;object-fit:cover;}
+    .blog-card-body{padding:20px;}
+    .blog-tag{display:inline-block;background:rgba(240,90,40,0.1);color:var(--orange);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.8px;padding:3px 10px;border-radius:4px;margin-bottom:10px;}
+    .blog-card h3{font-family:var(--serif);font-size:20px;font-weight:700;margin-bottom:8px;line-height:1.2;}
+    .blog-card p{font-size:13px;color:var(--muted);line-height:1.6;}
+    .blog-card-meta{margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:11px;color:var(--muted);}
+    .faq-list{max-width:720px;}
+    .faq-item{border-bottom:1px solid var(--border);padding:20px 0;}
+    .faq-q{font-size:16px;font-weight:600;color:var(--text);margin-bottom:10px;}
+    .faq-a{font-size:14px;color:var(--muted);line-height:1.7;}
+    footer{background:var(--dark);padding:48px 24px 32px;border-top:1px solid rgba(255,255,255,0.06);}
+    .footer-inner{max-width:1100px;margin:0 auto;}
+    .footer-top{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px;margin-bottom:40px;}
+    .footer-brand p{font-size:13px;color:#6a6660;line-height:1.6;max-width:260px;margin-top:12px;}
+    .footer-col h4{font-size:11px;font-weight:700;color:#4a4640;text-transform:uppercase;letter-spacing:1px;margin-bottom:14px;}
+    .footer-col a{display:block;font-size:13px;color:#6a6660;text-decoration:none;margin-bottom:8px;transition:color .15s;}
+    .footer-col a:hover{color:var(--orange);}
+    .footer-bottom{border-top:1px solid rgba(255,255,255,0.06);padding-top:24px;display:flex;justify-content:space-between;align-items:center;}
+    .footer-bottom p{font-size:12px;color:#4a4640;}
+
+    /* FORMS */
+    .form-panel{position:fixed;right:-460px;top:0;bottom:0;width:440px;background:var(--dark);z-index:600;transition:right .3s ease;overflow-y:auto;display:flex;flex-direction:column;box-shadow:-8px 0 40px rgba(0,0,0,0.3);}
+    .form-panel.open{right:0;}
+    .form-head{padding:24px 24px 18px;border-bottom:1px solid rgba(255,255,255,0.08);display:flex;align-items:flex-start;justify-content:space-between;flex-shrink:0;}
+    .form-title{font-size:22px;font-weight:700;color:white;margin-bottom:4px;}
+    .form-sub{font-size:12px;color:#6a6660;line-height:1.5;}
+    .form-microcopy{font-size:12px;color:#4a4640;margin-bottom:20px;line-height:1.5;}
+    .form-close{background:none;border:none;color:#6a6660;font-size:22px;cursor:pointer;line-height:1;}
+    .form-close:hover{color:white;}
+    .form-body{padding:24px;flex:1;}
+    .field{margin-bottom:16px;}
+    .field-label{display:block;font-size:10px;font-weight:700;color:#6a6660;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+    .field-input,.field-select,.field-textarea{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px 14px;font-size:13px;font-family:var(--sans);color:white;outline:none;transition:border-color .15s;}
+    .field-input:focus,.field-select:focus,.field-textarea:focus{border-color:var(--orange);}
+    .field-input::placeholder,.field-textarea::placeholder{color:#4a4640;}
+    .field-select option{background:var(--dark);color:white;}
+    .field-textarea{resize:vertical;min-height:72px;}
+    .field-row{display:flex;gap:12px;}
+    .field-row .field{flex:1;}
+    .form-submit{width:100%;padding:13px;background:var(--orange);color:white;border:none;border-radius:7px;font-size:15px;font-weight:700;font-family:var(--sans);cursor:pointer;margin-top:4px;transition:opacity .15s;}
+    .form-submit:hover{opacity:.88;}
+    .form-success{display:none;text-align:center;padding:24px;color:#4ade80;font-size:15px;font-weight:700;line-height:1.5;}
+    .form-error{display:none;padding:12px 14px;background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.3);border-radius:6px;color:#fca5a5;font-size:12px;margin-bottom:16px;}
+    .form-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:599;display:none;backdrop-filter:blur(2px);}
+    .form-overlay.open{display:block;}
+
+    /* MOBILE */
+    @media(max-width:768px){
+      header{padding:0 14px;height:52px;gap:10px;}
+      .logo{font-size:20px;}
+      .btn-primary{padding:7px 12px;font-size:11px;}
+      .nav-link{display:none;}
+      .ticker{top:52px;}
+      .hero{margin-top:82px;height:380px;}
+      .hero-content{padding:24px 20px;}
+      .hero-stats{grid-template-columns:repeat(2,1fr);}
+      .hstat{padding:14px 12px;}
+      .hstat-val{font-size:28px;}
+      .app-section{flex-direction:column;height:auto;}
+      .map-container{height:45vh;width:100%;order:1;}
+      .sidebar{width:100%;min-width:unset;height:50vh;border-right:none;border-top:1px solid var(--border);order:2;}
+      .city-shortcuts{display:none;}
+      .report-inner{grid-template-columns:1fr;gap:32px;}
+      .owner-inner{grid-template-columns:1fr;gap:32px;}
+      .footer-top{grid-template-columns:1fr 1fr;gap:28px;}
+      .footer-brand{grid-column:1/-1;}
+      .footer-bottom{flex-direction:column;gap:12px;text-align:center;}
+      .form-panel{width:100%;right:-100%;}
+      .form-panel.open{right:0;}
+    }
+    @media(min-width:769px) and (max-width:1100px){
+      .sidebar{width:340px;min-width:340px;}
+      .footer-top{grid-template-columns:1fr 1fr;}
+    }
+  </style>
+</head>
+<body>
+
+<h1 style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);">SpritzoMetro — Prezzi Aperol Spritz in Italia: Milano, Roma, Napoli, Venezia, Firenze</h1>
+<div class="top-loader" id="loader"></div>
+
+<header>
+  <a href="/" class="logo">Spritzo<em>Metro</em></a>
+  <div class="live-wrap">
+    <div class="live-dot"></div>
+    <span id="liveCount">— bar live</span>
+  </div>
+  <nav class="header-nav">
+    <a href="#map-section" class="nav-link">Map</a>
+    <a href="/en/blog" class="nav-link">Blog</a>
+    <a href="#city-pages" class="nav-link">Cities</a>
+    <a href="/" style="background:rgba(255,255,255,0.12);color:white;border:1px solid rgba(255,255,255,0.25);border-radius:5px;padding:6px 12px;font-size:12px;font-weight:600;font-family:var(--sans);text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;gap:4px;">&#127470;&#127481; IT</a>
+    <button class="btn-primary" onclick="openForm('contribute')">+ Report Price</button>
+  </nav>
+</header>
+
+<div class="ticker">
+  <div class="ticker-track" id="tickerTrack">
+    <span>Milano media €9.40</span><span>Roma media €7.80</span><span>Napoli media €5.20</span>
+    <span>Venezia media €8.50</span><span>Firenze media €6.90</span><span>Prices updated by users</span>
+    <span>Milano media €9.40</span><span>Roma media €7.80</span><span>Napoli media €5.20</span>
+    <span>Venezia media €8.50</span><span>Firenze media €6.90</span><span>Prezzi aggiornati dagli utenti</span>
+  </div>
+</div>
+
+<div class="hero">
+  <img class="hero-img" src="https://images.unsplash.com/photo-1536935338788-846bb9981813?w=1600&auto=format&fit=crop&q=80" alt="Aperol Spritz in un bar italiano" loading="eager"/>
+  <div class="hero-overlay"></div>
+  <div class="hero-content">
+    <div class="hero-eyebrow"><span></span>Italy's live price index<span></span></div>
+    <h1>Discover how much a Spritz<br/><em>really costs</em> across Italy</h1>
+    <p class="hero-sub">Compare Spritz prices by city, find the best-value bars, and report new prices in seconds.</p>
+    <div class="hero-ctas">
+      <a href="#map-section" class="btn-hero-primary">🍊 Find Spritz prices near me</a>
+      <button class="btn-hero-secondary" onclick="openForm('contribute')">Report a Spritz price</button>
+    </div>
+  </div>
+</div>
+
+<div class="hero-stats" id="heroStats">
+  <div class="hstat"><div class="hstat-val orange" id="avgPrice">—</div><div class="hstat-lbl">National Average</div></div>
+  <div class="hstat"><div class="hstat-val" id="minPrice">—</div><div class="hstat-lbl">Cheapest</div></div>
+  <div class="hstat"><div class="hstat-val" id="maxPrice">—</div><div class="hstat-lbl">Most Expensive</div></div>
+  <div class="hstat"><div class="hstat-val" id="totalBars">—</div><div class="hstat-lbl">Bars Monitored</div></div>
+</div>
+
+<div id="map-section" class="app-section">
+  <div class="sidebar">
+    <div class="filters">
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="searchInput" type="text" placeholder="Search bar or city..."/>
+      </div>
+      <div class="chip-row">
+        <button class="chip active" data-filter="all" onclick="setFilter('all')">All</button>
+        <button class="chip" data-filter="under4" onclick="setFilter('under4')">Under €4</button>
+        <button class="chip" data-filter="mid" onclick="setFilter('mid')">€4–€7</button>
+        <button class="chip" data-filter="over7" onclick="setFilter('over7')">Over €7</button>
+        <select class="sort-select" id="sortSelect">
+          <option value="price_asc">Cheapest first</option>
+          <option value="price_desc">Most expensive</option>
+          <option value="name_asc">A–Z</option>
+          <option value="recent">Recent</option>
+        </select>
+      </div>
+      <div class="chip-row" id="cityFilters">
+        <button class="chip active" data-city="all" onclick="setCity('all')">Italia</button>
+      </div>
+    </div>
+    <div class="bar-list" id="barList">
+      <div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Caricamento...</div>
+    </div>
+  </div>
+  <div class="map-container">
+    <div id="map"></div>
+    <div class="city-shortcuts">
+      <button class="city-short" onclick="flyTo(41.9,12.5,6)">Italia</button>
+      <button class="city-short" onclick="flyTo(45.464,9.190,13)">Milano</button>
+      <button class="city-short" onclick="flyTo(41.902,12.496,13)">Roma</button>
+      <button class="city-short" onclick="flyTo(40.851,14.268,13)">Napoli</button>
+      <button class="city-short" onclick="flyTo(45.434,12.338,13)">Venezia</button>
+      <button class="city-short" onclick="flyTo(43.769,11.256,13)">Firenze</button>
+    </div>
+    <div class="map-legend">
+      <div class="legend-title">Map markers</div>
+      <div class="legend-row"><div class="lcirc">€</div>Aperol Spritz Price</div>
+      <div class="legend-row"><div class="lcirc" style="background:var(--orange)">?</div>Price not available</div>
+    </div>
+  </div>
+</div>
+
+<div class="report-section">
+  <div class="report-inner">
+    <div>
+      <div class="section-eyebrow">Contribute</div>
+      <h2 class="section-title">Help others avoid overpriced Spritz</h2>
+      <p class="section-sub">Reporting a price takes less than 20 seconds. Your contribution helps thousands of people.</p>
+      <button class="btn-hero-primary" onclick="openForm('contribute')">🍊 Report a price now</button>
+    </div>
+    <div class="report-steps">
+      <div class="report-step"><div class="step-num">1</div><div class="step-content"><h4>Search the bar</h4><p>Type the name — coordinates are saved automatically.</p></div></div>
+      <div class="report-step"><div class="step-num">2</div><div class="step-content"><h4>Enter the price</h4><p>How much did you pay? Enter the exact amount.</p></div></div>
+      <div class="report-step"><div class="step-num">3</div><div class="step-content"><h4>Optional notes</h4><p>Happy hour, snacks included, type of Spritz...</p></div></div>
+      <div class="report-step"><div class="step-num">4</div><div class="step-content"><h4>Publish</h4><p>The price appears immediately on the map.</p></div></div>
+    </div>
+  </div>
+</div>
+
+<div class="owner-section">
+  <div class="owner-inner">
+    <div>
+      <div class="section-eyebrow" style="color:var(--orange)">For Bar Owners</div>
+      <h2 class="section-title-light">Are you the owner<br/>of a bar?</h2>
+      <p class="section-sub-light">Claim your bar profile for free and reach people looking for aperitivo in your city.</p>
+      <button class="btn-outline-light" onclick="openForm('claim')">Claim your bar →</button>
+      <div class="trust-strip">
+        <div class="trust-badge"><span>📅</span>Price updates</div>
+        <div class="trust-badge"><span>📍</span>Map visibility</div>
+        <div class="trust-badge"><span>✅</span>100% free</div>
+      </div>
+    </div>
+    <div class="owner-benefits">
+      <div class="owner-benefit"><span class="benefit-icon">💰</span>Update your Spritz price in real time</div>
+      <div class="owner-benefit"><span class="benefit-icon">📸</span>Add photos, menus and aperitivo offers</div>
+      <div class="owner-benefit"><span class="benefit-icon">✏️</span>Fix outdated information</div>
+      <div class="owner-benefit"><span class="benefit-icon">🗺️</span>Appear in city guides</div>
+      <div class="owner-benefit"><span class="benefit-icon">👥</span>Reach people looking for aperitivo near you</div>
+    </div>
+  </div>
+</div>
+
+<div id="city-pages" style="background:var(--bg);">
+  <div class="section">
+    <div class="section-eyebrow">City Guides</div>
+    <h2 class="section-title">Spritz Prices in Italy</h2>
+    <p class="section-sub">Explore prices city by city and find the best value bar near you.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;">
+      <a href="/spritz-price-milan" style="display:block;background:var(--dark);border-radius:10px;padding:20px;text-decoration:none;transition:transform .15s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''"><div style="font-size:28px;margin-bottom:8px;">🏙️</div><div style="font-family:var(--serif);font-size:20px;color:white;font-weight:700;margin-bottom:4px;">Milano</div><div style="font-size:12px;color:#6a6660;">Spritz Prices in Milan →</div></a>
+      <a href="/spritz-price-rome" style="display:block;background:var(--dark);border-radius:10px;padding:20px;text-decoration:none;transition:transform .15s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''"><div style="font-size:28px;margin-bottom:8px;">🏛️</div><div style="font-family:var(--serif);font-size:20px;color:white;font-weight:700;margin-bottom:4px;">Roma</div><div style="font-size:12px;color:#6a6660;">Spritz Prices in Rome →</div></a>
+      <a href="/spritz-price-naples" style="display:block;background:var(--dark);border-radius:10px;padding:20px;text-decoration:none;transition:transform .15s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''"><div style="font-size:28px;margin-bottom:8px;">🌋</div><div style="font-family:var(--serif);font-size:20px;color:white;font-weight:700;margin-bottom:4px;">Napoli</div><div style="font-size:12px;color:#6a6660;">Spritz Prices in Naples →</div></a>
+      <a href="/spritz-price-venice" style="display:block;background:var(--dark);border-radius:10px;padding:20px;text-decoration:none;transition:transform .15s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''"><div style="font-size:28px;margin-bottom:8px;">🚣</div><div style="font-family:var(--serif);font-size:20px;color:white;font-weight:700;margin-bottom:4px;">Venezia</div><div style="font-size:12px;color:#6a6660;">Spritz Prices in Venice →</div></a>
+      <a href="/spritz-price-florence" style="display:block;background:var(--dark);border-radius:10px;padding:20px;text-decoration:none;transition:transform .15s;" onmouseover="this.style.transform='translateY(-3px)'" onmouseout="this.style.transform=''"><div style="font-size:28px;margin-bottom:8px;">🌸</div><div style="font-family:var(--serif);font-size:20px;color:white;font-weight:700;margin-bottom:4px;">Firenze</div><div style="font-size:12px;color:#6a6660;">Spritz Prices in Florence →</div></a>
+    </div>
+  </div>
+</div>
+
+<div style="background:var(--cream);">
+  <div class="section">
+    <div class="section-eyebrow">Guides & Articles</div>
+    <h2 class="section-title">From the SpritzoMetro Blog</h2>
+    <p class="section-sub">Prices, neighbourhoods and tips for drinking well in every city.</p>
+    <div class="blog-grid">
+      <a href="/en/blog/spritz-milan-under-5-euros" class="blog-card"><img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&auto=format&fit=crop" alt="Spritz Milano" loading="lazy"/><div class="blog-card-body"><span class="blog-tag">Milano</span><h3>Where to drink a Spritz in Milan under €5</h3><p>The best bars by neighbourhood and how to avoid tourist traps.</p><div class="blog-card-meta">SpritzoMetro · 2025</div></div></a>
+      <a href="/en/blog/spritz-rome-guide" class="blog-card"><img src="https://images.unsplash.com/photo-1529260830199-42c24126f198?w=600&auto=format&fit=crop" alt="Spritz Roma" loading="lazy"/><div class="blog-card-body"><span class="blog-tag">Roma</span><h3>Spritz Guide in Rome by Neighbourhood</h3><p>From Pigneto to Campo de' Fiori: where to drink affordably.</p><div class="blog-card-meta">SpritzoMetro · 2025</div></div></a>
+      <a href="/en/blog/spritz-venice-bacari" class="blog-card"><img src="https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=600&auto=format&fit=crop" alt="Venezia" loading="lazy"/><div class="blog-card-body"><span class="blog-tag">Venezia</span><h3>Spritz in Venice: Bacari and Prices</h3><p>The best Venetian bacari for authentic Spritz at honest prices.</p><div class="blog-card-meta">SpritzoMetro · 2025</div></div></a>
+    </div>
+    <div style="text-align:center;margin-top:32px;"><a href="/blog" style="display:inline-block;border:1.5px solid var(--border);color:var(--muted);padding:11px 28px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;" onmouseover="this.style.borderColor='#F05A28';this.style.color='#F05A28'" onmouseout="this.style.borderColor='';this.style.color=''">See all articles →</a></div>
+  </div>
+</div>
+
+<div style="background:var(--bg);">
+  <div class="section">
+    <div class="section-eyebrow">FAQ</div>
+    <h2 class="section-title">Frequently Asked Questions</h2>
+    <div class="faq-list">
+      <div class="faq-item"><div class="faq-q">How much does a Spritz cost in Italy?</div><div class="faq-a">The average price ranges from €4 to €9 depending on the city and the bar.</div></div>
+      <div class="faq-item"><div class="faq-q">How are prices collected?</div><div class="faq-a">Prices are reported directly by users. Each report includes the bar name, city, price and date.</div></div>
+      <div class="faq-item"><div class="faq-q">Can I report a price?</div><div class="faq-a">Yes, click "Report Price" at the top. It takes less than 20 seconds.</div></div>
+      <div class="faq-item"><div class="faq-q">I own a bar, what can I do?</div><div class="faq-a">You can claim your bar profile for free by clicking "Claim your bar".</div></div>
+      <div class="faq-item"><div class="faq-q">Are prices updated in real time?</div><div class="faq-a">Yes, every new report appears immediately on the map.</div></div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-inner">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <a href="/" class="logo">Spritzo<em>Metro</em></a>
+        <p>Italy's reference for Aperol Spritz prices. Community-sourced data, updated in real time.</p>
+      </div>
+      <div class="footer-col"><h4>Cities</h4><a href="/spritz-price-milan">Spritz in Milan</a><a href="/spritz-price-rome">Spritz in Rome</a><a href="/spritz-price-venice">Spritz in Venice</a><a href="/spritz-price-naples">Spritz in Naples</a><a href="/spritz-price-florence">Spritz in Florence</a></div>
+      <div class="footer-col"><h4>SpritzoMetro</h4><a href="/blog">Blog</a><a href="#" onclick="openForm('contribute');return false;">Report a price</a><a href="#" onclick="openForm('claim');return false;">Claim your bar</a></div>
+      <div class="footer-col"><h4>Legale</h4><a href="#">Privacy Policy</a><a href="#">Termini di Servizio</a><a href="#">Cookie Policy</a></div>
+    </div>
+    <div class="footer-bottom">
+      <p>© 2025 SpritzoMetro. Prices are indicative and subject to change.</p>
+      <p style="font-size:11px;color:#3a3630;">Not affiliated with Aperol or Campari Group</p>
+    </div>
+  </div>
+</footer>
+
+<div class="form-overlay" id="contributeOverlay" onclick="closeForm('contribute')"></div>
+<div class="form-panel" id="contributePanel">
+  <div class="form-head">
+    <div><div class="form-title">Report a Price 🍊</div><div class="form-sub">Seen a Spritz price? Share it with the community.</div></div>
+    <button class="form-close" onclick="closeForm('contribute')">✕</button>
+  </div>
+  <div class="form-body">
+    <p class="form-microcopy">"Help others avoid overpriced Spritz. Takes less than 20 seconds."</p>
+    <div class="form-error" id="c_error"></div>
+    <div class="field">
+      <label class="field-label">Search Bar *</label>
+      <div id="c_places_wrap" style="width:100%;position:relative;"></div>
+      <div style="font-size:11px;color:#4a4640;margin-top:6px;">Search and select the bar — coordinates are saved automatically</div>
+    </div>
+    <div id="c_selected_bar" style="display:none;background:rgba(240,90,40,0.1);border:1px solid rgba(240,90,40,0.3);border-radius:6px;padding:10px 14px;margin-bottom:4px;">
+      <div style="font-size:10px;color:#F05A28;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:4px;">✓ Bar selected</div>
+      <div id="c_selected_name" style="font-size:13px;color:white;font-weight:700;"></div>
+      <div id="c_selected_addr" style="font-size:11px;color:#9a9690;margin-top:2px;"></div>
+    </div>
+    <input type="hidden" id="c_name"/>
+    <input type="hidden" id="c_city"/>
+    <input type="hidden" id="c_address"/>
+    <input type="hidden" id="c_lat"/>
+    <input type="hidden" id="c_lng"/>
+    <div class="field"><label class="field-label">Aperol Spritz Price (€) *</label><input class="field-input" id="c_price" type="number" placeholder="e.g. 4.50" step="0.50" min="1" max="25"/></div>
+    <div class="field"><label class="field-label">Notes (optional)</label><textarea class="field-textarea" id="c_notes" placeholder="happy hour, snacks included, type of spritz..."></textarea></div>
+    <button class="form-submit" id="c_submit_btn" onclick="submitContribute()">Submit Price</button>
+    <div class="form-success" id="c_success">✅ Thank you! Your price has been published.<br/><span style="font-size:13px;font-weight:400;color:#6a6660;display:block;margin-top:8px;">Share SpritzoMetro with a friend!</span></div>
+    <div style="margin-top:24px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.07);">
+      <div style="font-size:12px;color:#4a4640;margin-bottom:12px;">Are you the bar owner?</div>
+      <button onclick="closeForm('contribute');openForm('claim')" style="width:100%;padding:11px;background:transparent;border:1px solid rgba(255,255,255,0.12);border-radius:6px;color:#9a9690;font-size:12px;font-family:var(--sans);cursor:pointer;">Claim your bar →</button>
+    </div>
+  </div>
+</div>
+
+<div class="form-overlay" id="claimOverlay" onclick="closeForm('claim')"></div>
+<div class="form-panel" id="claimPanel">
+  <div class="form-head">
+    <div><div class="form-title">Are You the Owner? 🏪</div><div class="form-sub">Manage your bar on SpritzoMetro for free.</div></div>
+    <button class="form-close" onclick="closeForm('claim')">✕</button>
+  </div>
+  <div class="form-body">
+    <div class="field"><label class="field-label">Bar Name *</label><input class="field-input" id="cl_bar" placeholder="Exact bar name"/></div>
+    <div class="field-row">
+      <div class="field"><label class="field-label">Your name *</label><input class="field-input" id="cl_owner" placeholder="Full name"/></div>
+      <div class="field"><label class="field-label">Email *</label><input class="field-input" id="cl_email" type="email" placeholder="email@esempio.it"/></div>
+    </div>
+    <div class="field"><label class="field-label">Phone</label><input class="field-input" id="cl_phone" placeholder="+39 ..."/></div>
+    <div class="field"><label class="field-label">Message</label><textarea class="field-textarea" id="cl_msg" placeholder="Update the price or describe your bar..."></textarea></div>
+    <button class="form-submit" onclick="submitClaim()">Send Request</button>
+    <div class="form-success" id="cl_success">✅ Request sent! We'll be in touch soon.</div>
+  </div>
+</div>
+
+<script>
+const SUPABASE_URL      = 'https://wkaeyssmfwkefxjhsgav.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndrYWV5c3NtZndrZWZ4amhzZ2F2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwNjUxMzAsImV4cCI6MjA5MTY0MTEzMH0.lgq4S5Oexr5aNn2Zswo-8uqH--vFSiJmDNkAbHsFmlY';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+let allBars = [], filteredBars = [], markers = {}, map;
+let activeCity = 'all', activeFilter = 'all', activeBarId = null;
+let realtimeChannel = null;
+
+function initMap() {
+  map = L.map('map', {center:[42,12.5], zoom:6, zoomControl:false, attributionControl:false});
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {maxZoom:19}).addTo(map);
+  L.control.zoom({position:'bottomright'}).addTo(map);
+  setTimeout(function(){ map.invalidateSize(); }, 200);
+  setTimeout(function(){ map.invalidateSize(); }, 700);
+  setTimeout(function(){ map.invalidateSize(); }, 1400);
+  window.addEventListener('resize', function(){ map.invalidateSize(); });
+}
+
+function flyTo(lat, lng, zoom) {
+  map.flyTo([lat, lng], zoom, {duration: 1.2});
+}
+
+function makeMarker(price) {
+  var hasPrice = price !== null && price !== undefined;
+  var bg = hasPrice ? '#1C1812' : '#F05A28';
+  var label = hasPrice ? '\u20ac' + price.toFixed(1) : '?';
+  var fsize = hasPrice ? '12' : '14';
+  var svg = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">'
+    + '<circle cx="24" cy="24" r="22" fill="' + bg + '" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>'
+    + '<text x="24" y="25" text-anchor="middle" dominant-baseline="middle" fill="white"'
+    + ' font-family="Cormorant Garamond,serif" font-weight="600" font-size="' + fsize + '">' + label + '</text>'
+    + '</svg>';
+  return L.divIcon({html: svg, className: '', iconSize: [48,48], iconAnchor: [24,24], popupAnchor: [0,-26]});
+}
+
+async function loadData() {
+  document.getElementById('loader').classList.add('active');
+  try {
+    var result = await db.from('bars').select('*, prices(price, called_at, source)').order('name');
+    if (result.error) throw result.error;
+    allBars = result.data.map(function(bar) {
+      var prices = (bar.prices || []).sort(function(a, b){ return new Date(b.called_at) - new Date(a.called_at); });
+      var latest = prices[0];
+      var isNew = latest && latest.called_at && (Date.now() - new Date(latest.called_at).getTime()) < 7*24*3600*1000;
+      return Object.assign({}, bar, {
+        latestPrice: latest ? latest.price : null,
+        calledAt: latest ? latest.called_at : null,
+        source: latest ? latest.source : null,
+        isNew: isNew
+      });
+    });
+    buildCityFilters();
+    updateStats();
+    updateTicker();
+    applyFilters();
+    setupRealtime();
+  } catch(err) {
+    console.error('Load error:', err);
+    document.getElementById('barList').innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">Errore nel caricamento.</div>';
+  } finally {
+    document.getElementById('loader').classList.remove('active');
+  }
+}
+
+function buildCityFilters() {
+  var cities = [];
+  allBars.forEach(function(b){ if(b.city && cities.indexOf(b.city) === -1) cities.push(b.city); });
+  cities.sort();
+  var wrap = document.getElementById('cityFilters');
+  wrap.innerHTML = '<button class="chip active" data-city="all" onclick="setCity(\'all\')">Italia</button>';
+  cities.forEach(function(c) {
+    var btn = document.createElement('button');
+    btn.className = 'chip';
+    btn.dataset.city = c;
+    btn.textContent = c;
+    btn.onclick = function(){ setCity(c); };
+    wrap.appendChild(btn);
+  });
+  document.getElementById('liveCount').textContent = allBars.length + ' bars live';
+}
+
+function updateStats() {
+  var wp = allBars.filter(function(b){ return b.latestPrice; });
+  document.getElementById('totalBars').textContent = allBars.length;
+  if (wp.length) {
+    var prices = wp.map(function(b){ return b.latestPrice; });
+    var avg = prices.reduce(function(s,p){ return s+p; }, 0) / prices.length;
+    document.getElementById('avgPrice').textContent = '\u20ac' + avg.toFixed(2);
+    document.getElementById('minPrice').textContent = '\u20ac' + Math.min.apply(null, prices).toFixed(2);
+    document.getElementById('maxPrice').textContent = '\u20ac' + Math.max.apply(null, prices).toFixed(2);
+  }
+}
+
+function updateTicker() {
+  var cityAvgs = {};
+  allBars.filter(function(b){ return b.latestPrice && b.city; }).forEach(function(b){
+    if (!cityAvgs[b.city]) cityAvgs[b.city] = [];
+    cityAvgs[b.city].push(b.latestPrice);
+  });
+  var items = Object.keys(cityAvgs).map(function(city){
+    var avg = cityAvgs[city].reduce(function(s,p){ return s+p; }, 0) / cityAvgs[city].length;
+    return city + ' media \u20ac' + avg.toFixed(2);
+  });
+  items.push(allBars.length + ' bars monitored');
+  items.push('Prices updated by users');
+  var doubled = items.concat(items);
+  document.getElementById('tickerTrack').innerHTML = doubled.map(function(t){ return '<span>' + t + '</span>'; }).join('');
+}
+
+function setCity(city) {
+  activeCity = city;
+  document.querySelectorAll('[data-city]').forEach(function(b){ b.classList.toggle('active', b.dataset.city === city); });
+  applyFilters();
+}
+
+function setFilter(filter) {
+  activeFilter = filter;
+  document.querySelectorAll('[data-filter]').forEach(function(b){ b.classList.toggle('active', b.dataset.filter === filter); });
+  applyFilters();
+}
+
+function applyFilters() {
+  var search = document.getElementById('searchInput').value.toLowerCase();
+  var sort = document.getElementById('sortSelect').value;
+  filteredBars = allBars.filter(function(b) {
+    var mc = activeCity === 'all' || b.city === activeCity;
+    var ms = !search || b.name.toLowerCase().indexOf(search) !== -1 || (b.city||'').toLowerCase().indexOf(search) !== -1 || (b.address||'').toLowerCase().indexOf(search) !== -1;
+    var mf = true;
+    if (activeFilter === 'under4') mf = b.latestPrice && b.latestPrice < 4;
+    else if (activeFilter === 'mid') mf = b.latestPrice && b.latestPrice >= 4 && b.latestPrice <= 7;
+    else if (activeFilter === 'over7') mf = b.latestPrice && b.latestPrice > 7;
+    return mc && ms && mf;
+  });
+  filteredBars.sort(function(a, b) {
+    if (sort === 'price_asc') return (a.latestPrice||99) - (b.latestPrice||99);
+    if (sort === 'price_desc') return (b.latestPrice||0) - (a.latestPrice||0);
+    if (sort === 'name_asc') return a.name.localeCompare(b.name);
+    if (sort === 'recent') return new Date(b.calledAt||0) - new Date(a.calledAt||0);
+    return 0;
+  });
+  renderList();
+  renderMarkers();
+}
+
+function renderList() {
+  var list = document.getElementById('barList');
+  if (!filteredBars.length) {
+    list.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted);font-size:14px;">Nessun bar trovato.</div>';
+    return;
+  }
+  var html = '';
+  filteredBars.forEach(function(bar, i) {
+    var price = bar.latestPrice ? '\u20ac' + bar.latestPrice.toFixed(2) : '\u2014';
+    var date = bar.calledAt ? new Date(bar.calledAt).toLocaleDateString('it-IT') : '';
+    var srcTag = bar.source === 'user_submit' ? '<span class="tag user">Utente</span>' : bar.source === 'ai_call' ? '<span class="tag ai">AI</span>' : '';
+    var newTag = bar.isNew ? '<span class="tag new">Nuovo</span>' : '';
+    html += '<div class="bar-item ' + (bar.id === activeBarId ? 'active' : '') + '" onclick="selectBar(\'' + bar.id + '\')" data-id="' + bar.id + '">'
+      + '<div class="bar-rank">' + (i+1) + '</div>'
+      + '<div class="bar-info">'
+        + '<div class="bar-name">' + bar.name + '</div>'
+        + '<div class="bar-sub">' + (bar.city||'') + (date ? ' \u00b7 ' + date : '') + ' ' + srcTag + newTag + '</div>'
+      + '</div>'
+      + '<div class="bar-price ' + (!bar.latestPrice ? 'none' : '') + '">' + price + '</div>'
+    + '</div>';
+    if ((i+1) % 8 === 0 && i < filteredBars.length - 1) {
+      html += '<div class="promo-card" onclick="openForm(\'contribute\')">'
+        + '<p>Il tuo bar non \u00e8 nell\'indice?</p>'
+        + '<span>Aggiungilo gratis \u2192</span></div>';
+    }
+  });
+  list.innerHTML = html;
+}
+
+function renderMarkers() {
+  Object.values(markers).forEach(function(m){ map.removeLayer(m); });
+  markers = {};
+  filteredBars.forEach(function(bar) {
+    if (!bar.latitude || !bar.longitude) return;
+    var m = L.marker([bar.latitude, bar.longitude], {icon: makeMarker(bar.latestPrice)});
+    var addr = bar.address || '';
+    var mapsUrl = 'https://www.google.com/maps/search/' + encodeURIComponent(bar.name + ' ' + addr);
+    m.bindPopup('<div class="popup-inner">'
+      + '<div class="popup-name">' + bar.name + '</div>'
+      + (bar.latestPrice ? '<div class="popup-price">\u20ac' + bar.latestPrice.toFixed(2) + '</div>' : '<div class="popup-price none">Prezzo non disponibile</div>')
+      + (addr ? '<div class="popup-addr">' + addr + '</div>' : '')
+      + '<div class="popup-actions">'
+        + '<a class="popup-maps" href="' + mapsUrl + '" target="_blank">\ud83d\udccd Maps</a>'
+        + '<button class="popup-report" onclick="openForm(\'contribute\')">+ Prezzo</button>'
+      + '</div>'
+    + '</div>', {maxWidth: 240});
+    m.on('click', function(){ selectBar(bar.id, false); });
+    m.addTo(map);
+    markers[bar.id] = m;
+  });
+}
+
+function selectBar(id, doFly) {
+  if (doFly === undefined) doFly = true;
+  activeBarId = id;
+  var bar = null;
+  for (var i = 0; i < allBars.length; i++) { if (allBars[i].id === id) { bar = allBars[i]; break; } }
+  if (!bar) return;
+  document.querySelectorAll('.bar-item').forEach(function(el){ el.classList.toggle('active', el.dataset.id === id); });
+  var el = document.querySelector('.bar-item[data-id="' + id + '"]');
+  if (el) el.scrollIntoView({behavior:'smooth', block:'nearest'});
+  if (doFly && bar.latitude && bar.longitude) map.flyTo([bar.latitude, bar.longitude], 15, {duration: 1});
+  if (markers[id]) markers[id].openPopup();
+}
+
+function setupRealtime() {
+  if (realtimeChannel) realtimeChannel.unsubscribe();
+  realtimeChannel = db.channel('live-' + Date.now())
+    .on('postgres_changes', {event:'*', schema:'public', table:'bars'}, function(){ handleRealtimeUpdate(); })
+    .on('postgres_changes', {event:'*', schema:'public', table:'prices'}, function(){ handleRealtimeUpdate(); })
+    .subscribe();
+}
+
+var reloadTimeout = null;
+function handleRealtimeUpdate() {
+  if (reloadTimeout) clearTimeout(reloadTimeout);
+  reloadTimeout = setTimeout(function(){ reloadData(); }, 1500);
+}
+
+async function reloadData() {
+  try {
+    var result = await db.from('bars').select('*, prices(price, called_at, source)').order('name');
+    if (result.error) throw result.error;
+    allBars = result.data.map(function(bar) {
+      var prices = (bar.prices || []).sort(function(a, b){ return new Date(b.called_at) - new Date(a.called_at); });
+      var latest = prices[0];
+      var isNew = latest && latest.called_at && (Date.now() - new Date(latest.called_at).getTime()) < 7*24*3600*1000;
+      return Object.assign({}, bar, {
+        latestPrice: latest ? latest.price : null,
+        calledAt: latest ? latest.called_at : null,
+        source: latest ? latest.source : null,
+        isNew: isNew
+      });
+    });
+    buildCityFilters(); updateStats(); updateTicker(); applyFilters();
+  } catch(err) { console.error('Reload error:', err); }
+}
+
+function openForm(type) {
+  document.getElementById(type + 'Panel').classList.add('open');
+  document.getElementById(type + 'Overlay').classList.add('open');
+}
+
+function closeForm(type) {
+  document.getElementById(type + 'Panel').classList.remove('open');
+  document.getElementById(type + 'Overlay').classList.remove('open');
+}
+
+function showError(msg) {
+  var e = document.getElementById('c_error');
+  e.textContent = msg;
+  e.style.display = 'block';
+}
+
+function hideError() {
+  document.getElementById('c_error').style.display = 'none';
+}
+
+function setSubmitLoading(loading) {
+  var btn = document.getElementById('c_submit_btn');
+  btn.textContent = loading ? 'Invio in corso...' : 'Invia Prezzo';
+  btn.disabled = loading;
+  btn.style.opacity = loading ? '0.6' : '1';
+}
+
+function initPlacesAutocomplete() {
+  var wrap = document.getElementById('c_places_wrap');
+  if (!wrap) return;
+  var input = document.createElement('input');
+  input.id = 'c_places_input';
+  input.placeholder = 'Es. Bar Basso, Milano...';
+  input.autocomplete = 'off';
+  input.style.cssText = 'width:100%;box-sizing:border-box;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:6px;padding:10px 14px;font-size:13px;font-family:sans-serif;color:white;outline:none;';
+  wrap.appendChild(input);
+  var dropdown = document.createElement('div');
+  dropdown.style.cssText = 'display:none;position:absolute;z-index:9999;background:#1C1812;border:1px solid rgba(255,255,255,0.1);border-radius:8px;margin-top:3px;box-shadow:0 8px 32px rgba(0,0,0,0.7);width:100%;max-height:240px;overflow-y:auto;';
+  wrap.appendChild(dropdown);
+  var s = document.createElement('style');
+  s.textContent = '#c_places_input:focus{border-color:#F05A28!important}.nom-item{padding:11px 14px;cursor:pointer;border-bottom:1px solid rgba(255,255,255,0.06)}.nom-item:hover{background:rgba(240,90,40,0.12)}.nom-name{font-weight:700;color:white;font-size:13px;margin-bottom:2px}.nom-addr{font-size:11px;color:#6a6660}';
+  document.head.appendChild(s);
+  var timer;
+  input.addEventListener('input', function() {
+    clearTimeout(timer);
+    var q = input.value.trim();
+    if (q.length < 2) { dropdown.style.display = 'none'; return; }
+    timer = setTimeout(function(){ fetchSuggestions(q, dropdown); }, 400);
+  });
+  input.addEventListener('focus', function(){ input.style.borderColor = '#F05A28'; });
+  input.addEventListener('blur', function(){ input.style.borderColor = 'rgba(255,255,255,0.1)'; setTimeout(function(){ dropdown.style.display = 'none'; }, 200); });
+}
+
+async function fetchSuggestions(query, dropdown) {
+  try {
+    var res = await fetch('/api/geocode?query=' + encodeURIComponent(query));
+    var data = await res.json();
+    dropdown.innerHTML = '';
+    if (!data.results || !data.results.length) { dropdown.style.display = 'none'; return; }
+    data.results.forEach(function(r) {
+      var item = document.createElement('div');
+      item.className = 'nom-item';
+      item.innerHTML = '<div class="nom-name">' + r.name + '</div><div class="nom-addr">' + r.address + '</div>';
+      item.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        document.getElementById('c_places_input').value = r.name;
+        document.getElementById('c_name').value = r.name;
+        document.getElementById('c_city').value = r.city;
+        document.getElementById('c_address').value = r.address;
+        document.getElementById('c_lat').value = r.lat;
+        document.getElementById('c_lng').value = r.lng;
+        document.getElementById('c_selected_name').textContent = r.name;
+        document.getElementById('c_selected_addr').textContent = r.address;
+        document.getElementById('c_selected_bar').style.display = 'block';
+        dropdown.style.display = 'none';
+      });
+      dropdown.appendChild(item);
+    });
+    dropdown.style.display = 'block';
+  } catch(e) { dropdown.style.display = 'none'; }
+}
+
+async function submitContribute() {
+  hideError();
+  setSubmitLoading(true);
+  var name = document.getElementById('c_name').value.trim();
+  var city = document.getElementById('c_city').value.trim();
+  var price = parseFloat(document.getElementById('c_price').value);
+  var addr = document.getElementById('c_address').value.trim();
+  var lat = parseFloat(document.getElementById('c_lat').value);
+  var lng = parseFloat(document.getElementById('c_lng').value);
+  if (!name) { showError('Search and select a bar from the list'); setSubmitLoading(false); return; }
+  if (!price || isNaN(price)) { showError('Please enter a valid Spritz price'); setSubmitLoading(false); return; }
+  try {
+    var barId;
+    var existing = null;
+    for (var i = 0; i < allBars.length; i++) {
+      if (allBars[i].name.toLowerCase() === name.toLowerCase() && (allBars[i].city||'').toLowerCase() === (city||'').toLowerCase()) {
+        existing = allBars[i]; break;
+      }
+    }
+    if (existing) {
+      barId = existing.id;
+    } else {
+      var barResult = await db.from('bars').insert({
+        name: name, city: city||null, address: addr||null, source: 'user_submit',
+        latitude: isNaN(lat) ? null : lat, longitude: isNaN(lng) ? null : lng
+      }).select().single();
+      if (barResult.error) { showError('Errore: ' + barResult.error.message); setSubmitLoading(false); return; }
+      barId = barResult.data.id;
+    }
+    var priceResult = await db.from('prices').insert({
+      bar_id: barId, price: price, source: 'user_submit', called_at: new Date().toISOString()
+    }).select().single();
+    if (priceResult.error) { showError('Errore prezzo: ' + priceResult.error.message); setSubmitLoading(false); return; }
+    await new Promise(function(r){ setTimeout(r, 800); });
+    await reloadData();
+    activeCity = 'all';
+    document.querySelectorAll('[data-city]').forEach(function(b){ b.classList.toggle('active', b.dataset.city === 'all'); });
+    var inp = document.getElementById('c_places_input');
+    if (inp) inp.value = '';
+    document.getElementById('c_selected_bar').style.display = 'none';
+    ['c_name','c_city','c_address','c_lat','c_lng'].forEach(function(id){ document.getElementById(id).value = ''; });
+    document.getElementById('c_price').value = '';
+    document.getElementById('c_notes').value = '';
+    document.getElementById('c_success').style.display = 'block';
+    setSubmitLoading(false);
+    setTimeout(function(){ closeForm('contribute'); document.getElementById('c_success').style.display = 'none'; }, 2500);
+  } catch(err) { showError('Errore: ' + err.message); setSubmitLoading(false); }
+}
+
+async function submitClaim() {
+  var barName = document.getElementById('cl_bar').value.trim();
+  var ownerName = document.getElementById('cl_owner').value.trim();
+  var email = document.getElementById('cl_email').value.trim();
+  if (!barName || !ownerName || !email) { alert('Compila i campi obbligatori (*)'); return; }
+  await db.from('claims').insert({
+    bar_name: barName, owner_name: ownerName, email: email,
+    phone: document.getElementById('cl_phone').value.trim(),
+    message: document.getElementById('cl_msg').value.trim()
+  });
+  document.getElementById('cl_success').style.display = 'block';
+  setTimeout(function(){ closeForm('claim'); document.getElementById('cl_success').style.display = 'none'; }, 2500);
+}
+
+document.getElementById('searchInput').addEventListener('input', applyFilters);
+document.getElementById('sortSelect').addEventListener('change', applyFilters);
+initMap();
+loadData();
+initPlacesAutocomplete();
+</script>
+
+</body>
+</html>
