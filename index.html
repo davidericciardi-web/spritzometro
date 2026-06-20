@@ -602,7 +602,11 @@ function updateTicker() {
   items.push(allBars.length + ' bar monitorati');
   items.push('Prezzi aggiornati dagli utenti');
   var doubled = items.concat(items);
-  document.getElementById('tickerTrack').innerHTML = doubled.map(function(t){ return '<span>' + t + '</span>'; }).join('');
+  var newHTML = doubled.map(function(t){ return '<span>' + t + '</span>'; }).join('');
+var track = document.getElementById('tickerTrack');
+if (track.innerHTML !== newHTML) {
+  track.innerHTML = newHTML;
+}
 }
 
 function setCity(city) {
